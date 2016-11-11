@@ -1,5 +1,7 @@
 package kth.id2209.homework1.agent;
 
+import jade.domain.DFService;
+import jade.domain.FIPAException;
 import kth.id2209.homework1.behaviour.CuratorDetailBehaviour;
 import kth.id2209.homework1.pojo.Artifact;
 import jade.core.Agent;
@@ -14,6 +16,12 @@ public class CuratorAgent extends Agent {
     Hashtable<String, Artifact[]> artifactHashtableByInterests;
 
     protected void setup() {
+        try {
+            DFService.register(this, DFUtilities.buildDFAgent(this.getAID(), getLocalName(), "curator"));
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
+
         artifactHashtableById = new Hashtable<>();
         artifactHashtableByInterests = new Hashtable<>();
         loadHashtables();
@@ -22,7 +30,10 @@ public class CuratorAgent extends Agent {
     }
 
     protected void takeDown() {
-
+        try {
+            DFService.deregister(this);
+        } catch (Exception e) {
+        }
     }
 
     private void loadHashtables() {

@@ -16,7 +16,15 @@ public class CuratorDetailBehaviour extends CyclicBehaviour {
             System.out.println("Got something from profiler");
             // TODO - lookup
 
-            reply.setContent("blabla");
+            if (true) {// found
+                reply.setPerformative(ACLMessage.INFORM_REF);
+                reply.setContent("blabla");
+            } else {
+                // Not available
+                reply.setPerformative(ACLMessage.REFUSE);
+                reply.setContent("not-available");
+            }
+
             myAgent.send(reply);
         } else {
             block();
