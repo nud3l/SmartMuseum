@@ -10,7 +10,7 @@ import kth.id2209.homework1.behaviour.TourGuideGetArtifactsBehaviour;
 import kth.id2209.homework1.behaviour.TourGuideProfilerRequestBehaviour;
 import kth.id2209.homework1.behaviour.TourGuideVirtualTourBuilderBehaviour;
 import kth.id2209.homework1.pojo.Artifact;
-import kth.id2209.homework1.pojo.Interests;
+import kth.id2209.homework1.pojo.Enums;
 
 import java.util.Hashtable;
 
@@ -18,7 +18,7 @@ import java.util.Hashtable;
  * Created by tharidu on 11/9/16.
  */
 public class TourGuideAgent extends Agent {
-    Hashtable<Long, Interests[]> userInterests;
+    Hashtable<Long, Enums[]> userInterests;
     Hashtable<String, Artifact[]> virtualTour;
 
     protected void setup() {

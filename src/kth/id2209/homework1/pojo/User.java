@@ -10,6 +10,6 @@ public class User {
     private int age;
     private String occupation;
     private String gender;
-    private Interests[] interests;
+    private Enums[] interests;
     private ArrayList<Long> visitedArtifactIds;
 }

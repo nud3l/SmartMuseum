@@ -1,26 +1,25 @@
 package kth.id2209.homework1.pojo;
 
-import java.util.Date;
+import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * Created by tharidu on 11/9/16.
  */
-public class Artifact {
+public class Artifact implements Serializable {
     private long id;
     private String name;
-    private String description;
     private String creator;
-    private Date dateOfCreation;
+    private int completedYear;
     private String placeOfCreation;
     private String genre;
-    private Interests[] category;
+    private Enums.interest[] category;
 
-    public Artifact(long id, String name, String description, String creator, Date dateOfCreation, String placeOfCreation, String genre, Interests[] category) {
+    public Artifact(long id, String name, String creator, int completedYear, String placeOfCreation, String genre, Enums.interest[] category) {
         this.id = id;
         this.name = name;
-        this.description = description;
         this.creator = creator;
-        this.dateOfCreation = dateOfCreation;
+        this.completedYear = completedYear;
         this.placeOfCreation = placeOfCreation;
         this.genre = genre;
         this.category = category;
@@ -42,14 +41,6 @@ public class Artifact {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getCreator() {
         return creator;
     }
@@ -58,12 +49,12 @@ public class Artifact {
         this.creator = creator;
     }
 
-    public Date getDateOfCreation() {
-        return dateOfCreation;
+    public int getCompletedYear() {
+        return completedYear;
     }
 
-    public void setDateOfCreation(Date dateOfCreation) {
-        this.dateOfCreation = dateOfCreation;
+    public void setCompletedYear(int completedYear) {
+        this.completedYear = completedYear;
     }
 
     public String getPlaceOfCreation() {
@@ -82,11 +73,33 @@ public class Artifact {
         this.genre = genre;
     }
 
-    public Interests[] getCategory() {
+    public Enums.interest[] getCategory() {
         return category;
     }
 
-    public void setCategory(Interests[] category) {
+    public void setCategory(Enums.interest[] category) {
         this.category = category;
+    }
+
+    public boolean matchCategory(Enums.interest interest) {
+        for (int i = 0; i < category.length; i++) {
+            if (category[i] == interest) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Artifact{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", creator='" + creator + '\'' +
+                ", completedYear=" + completedYear +
+                ", placeOfCreation='" + placeOfCreation + '\'' +
+                ", genre='" + genre + '\'' +
+                ", category=" + Arrays.toString(category) +
+                '}';
     }
 }
