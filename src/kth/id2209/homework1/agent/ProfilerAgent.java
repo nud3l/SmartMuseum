@@ -2,9 +2,12 @@ package kth.id2209.homework1.agent;
 
 import jade.core.AID;
 import jade.core.behaviours.*;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.core.Agent;
+import kth.id2209.homework1.pojo.User;
 
 /**
  * Created by tharidu on 11/9/16.
@@ -15,11 +18,25 @@ public class ProfilerAgent extends Agent {
     private static final String STATE_C = "C";
     private static final String RECV_ARTIFACT = "received-artifact";
     private MessageTemplate messageTemplate;
+    private User user;
 
     protected void setup() {
-//        addBehaviour(new ProfilerDetailRequestBehaviour());
+        try {
+            DFService.register(this, DFUtilities.buildDFAgent(this.getAID(), getLocalName(), "profiler"));
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
+
+        user = (User) getArguments()[0];
+
+        AID[] tourAgents = DFUtilities.searchDF(this, "tour-guide");
+        AID curator = DFUtilities.getService(this, "curator");
+
+        if (curator == null || tourAgents.length == 0)
+            System.exit(1);
 
         FSMBehaviour fsmBehaviour = new FSMBehaviour();
+
         fsmBehaviour.registerFirstState(new OneShotBehaviour() {
             @Override
             public void action() {
