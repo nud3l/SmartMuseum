@@ -23,7 +23,7 @@ public class CuratorAgent extends Agent {
 
     protected void setup() {
         try {
-            DFService.register(this, DFUtilities.buildDFAgent(this.getAID(), getLocalName(), "curator"));
+            DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "curator"));
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }

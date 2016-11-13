@@ -7,11 +7,15 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.SearchConstraints;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
+import jade.lang.acl.ACLMessage;
+
+import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Created by tharidu on 11/10/16.
  */
-public class DFUtilities {
+public class Utilities {
     public static DFAgentDescription buildDFAgent(AID aid, String localName, String type) {
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(aid);
@@ -59,5 +63,29 @@ public class DFUtilities {
         }
 
         return null;
+    }
+
+    public static ACLMessage createAclMessage(int performative, AID[] receivers, String ontology, String content) {
+        ACLMessage aclMessage = new ACLMessage(performative);
+        aclMessage.setContent(content);
+
+        for (AID receiver : receivers) {
+            aclMessage.addReceiver(receiver);
+        }
+
+        aclMessage.setOntology(ontology);
+        return aclMessage;
+    }
+
+    public static ACLMessage createAclMessage(int performative, AID[] receivers, String ontology, Serializable contentObject) throws IOException {
+        ACLMessage aclMessage = new ACLMessage(performative);
+        aclMessage.setContentObject(contentObject);
+
+        for (AID receiver : receivers) {
+            aclMessage.addReceiver(receiver);
+        }
+
+        aclMessage.setOntology(ontology);
+        return aclMessage;
     }
 }
