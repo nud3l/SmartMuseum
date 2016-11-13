@@ -32,6 +32,7 @@ public class CuratorAgent extends Agent {
 //        artifactHashtableByInterests = new Hashtable<>();
         artifactHashtableById = testArtifacts();
 
+        // Curator and profiler
         addBehaviour(new CyclicBehaviour() {
             @Override
             public void action() {
@@ -61,6 +62,7 @@ public class CuratorAgent extends Agent {
             }
         });
 
+        // Curator and tour guide
         addBehaviour(new CyclicBehaviour() {
             @Override
             public void action() {
@@ -79,6 +81,7 @@ public class CuratorAgent extends Agent {
 
                         Artifact[] artifactsArr = new Artifact[artifacts.size()];
                         reply.setContentObject(artifacts.toArray(artifactsArr));
+                        reply.setPerformative(ACLMessage.AGREE);
                     } catch (UnreadableException e) {
                         e.printStackTrace();
                     } catch (IOException e) {

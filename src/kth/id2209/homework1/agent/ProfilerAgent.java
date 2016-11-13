@@ -145,7 +145,7 @@ public class ProfilerAgent extends Agent {
                 @Override
                 public void action() {
                     try {
-                        ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.QUERY_REF, agent.tourAgents, ONTOLOGY, agent.user.getInterests());
+                        ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.REQUEST, agent.tourAgents, ONTOLOGY, agent.user.getInterests());
                         aclMessage.setReplyWith("req" + System.currentTimeMillis());
                         agent.send(aclMessage);
                         messageTemplate = MessageTemplate.MatchInReplyTo(aclMessage.getReplyWith());
