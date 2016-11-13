@@ -14,23 +14,21 @@ import java.util.List;
 public class TourGuideProfilerRequestBehaviour extends CyclicBehaviour{
     @Override
     public void action() {
-        // Receive only request messages
-        MessageTemplate profilerTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
-        ACLMessage profilerRequest = myAgent.receive(profilerTemplate);
+        // Receive only profiler request messages
+        MessageTemplate profilerRequestTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+        ACLMessage profilerRequest = myAgent.receive(profilerRequestTemplate);
 
         if (profilerRequest != null) {
             // Store request information and accept request
-            AID profiler = profilerRequest.getSender();
-            String conversationId = profilerRequest.getConversationId();
             String interestString = profilerRequest.getContent();
-            List<String> interestList = Arrays.asList(interestString.split("\\s*,\\s*"));
-            // TODO: Store request info
 
             ACLMessage reply = profilerRequest.createReply();
-            System.out.println("Got something from profiler");
+            System.out.println("Got request from profiler");
 
             // Propose to create virtual tour
             reply.setPerformative(ACLMessage.PROPOSE);
+            reply.setContent(interestString);
+
             myAgent.send(reply);
 
         } else {
