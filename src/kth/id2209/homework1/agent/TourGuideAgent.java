@@ -1,5 +1,6 @@
 package kth.id2209.homework1.agent;
 
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.DFService;
@@ -18,8 +19,9 @@ import java.util.Hashtable;
  * Created by tharidu on 11/9/16.
  */
 public class TourGuideAgent extends Agent {
-    Hashtable<Long, Enums[]> userInterests;
-    Hashtable<String, Artifact[]> virtualTour;
+    //Hashtable<Long, Interests[]> userInterests;
+    //Hashtable<String, Artifact[]> virtualTour;
+    private AID[] curator;
 
     protected void setup() {
         // Register virtual tour service in the yellow pages
@@ -36,8 +38,8 @@ public class TourGuideAgent extends Agent {
             fe.printStackTrace();
         }
 
-        userInterests = new Hashtable<>();
-        virtualTour = new Hashtable<>();
+        //userInterests = new Hashtable<>();
+        //virtualTour = new Hashtable<>();
 
         System.out.println("Hello! Tour Guide "+getAID().getName()+" is ready.");
 
