@@ -2,18 +2,15 @@ package kth.id2209.homework1.agent;
 
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
-import kth.id2209.homework1.behaviour.TourGuideGetArtifactsBehaviour;
-import kth.id2209.homework1.behaviour.TourGuideProfilerRequestBehaviour;
-import kth.id2209.homework1.behaviour.TourGuideVirtualTourBuilderBehaviour;
-import kth.id2209.homework1.pojo.Artifact;
-import kth.id2209.homework1.pojo.Enums;
-
-import java.util.Hashtable;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 /**
  * Created by tharidu on 11/9/16.
@@ -21,7 +18,7 @@ import java.util.Hashtable;
 public class TourGuideAgent extends Agent {
     //Hashtable<Long, Interests[]> userInterests;
     //Hashtable<String, Artifact[]> virtualTour;
-    private AID[] curator;
+    private AID curator;
 
     protected void setup() {
         // Register virtual tour service in the yellow pages
@@ -38,18 +35,84 @@ public class TourGuideAgent extends Agent {
             fe.printStackTrace();
         }
 
+        // Get the curator
+        curator = Utilities.getService(this, "curator");
+
         //userInterests = new Hashtable<>();
         //virtualTour = new Hashtable<>();
 
         System.out.println("Hello! Tour Guide "+getAID().getName()+" is ready.");
 
         // Listen for requests from profiler
-        addBehaviour(new TourGuideProfilerRequestBehaviour());
+        addBehaviour(new CyclicBehaviour() {
+            @Override
+            public void action() {
+                // Receive only profiler request messages
+                MessageTemplate profilerRequestTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+                ACLMessage profilerRequest = myAgent.receive(profilerRequestTemplate);
+
+                if (profilerRequest != null) {
+                    // Store request information and accept request
+                    String interest = profilerRequest.getContent();
+                    ACLMessage reply = profilerRequest.createReply();
+
+                    System.out.println("Got request from profiler");
+                    // Propose to create virtual tour
+                    reply.setPerformative(ACLMessage.PROPOSE);
+                    reply.setContent(interest);
+                    myAgent.send(reply);
+
+                } else {
+                    block();
+                }
+
+            }
+         });
 
         // Build virtual tour for profiler
-        SequentialBehaviour virtualTourBuilder = new SequentialBehaviour();
-        virtualTourBuilder.addSubBehaviour(new TourGuideGetArtifactsBehaviour());
-        virtualTourBuilder.addSubBehaviour(new TourGuideVirtualTourBuilderBehaviour());
+        SequentialBehaviour virtualTourBuilder = new SequentialBehaviour() {
+            public int onEnd() {
+                reset();
+                myAgent.addBehaviour(this);
+                return super.onEnd();
+            }
+        };
+        virtualTourBuilder.addSubBehaviour(new OneShotBehaviour(){
+            @Override
+            public void action() {
+                // Receive only profiler accept messages
+                MessageTemplate profilerAcceptTemplate = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
+                ACLMessage profilerAccept = myAgent.receive(profilerAcceptTemplate);
+
+                if (profilerAccept != null) {
+                    // Store request information and accept request
+                    String interestString = profilerAccept.getContent();
+                    System.out.println("Got accept from profiler");
+
+                    // Request artifacts from curator
+                    ACLMessage request = new ACLMessage(ACLMessage.REQUEST);
+                    request.addReceiver(curator);
+                    request.setContent(interestString);
+
+                    myAgent.send(request);
+
+                } else {
+                    block();
+                }
+
+            }
+        });
+        virtualTourBuilder.addSubBehaviour(new OneShotBehaviour() {
+            @Override
+            public void action() {
+                // Receive only curator agree messages
+                MessageTemplate curatorAgreeTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
+                ACLMessage curatorAgree = myAgent.receive(curatorAgreeTemplate);
+                // TODO
+                System.out.println("Preparing virtual tour");
+                // Send message to profiler
+            }
+        });
         addBehaviour(virtualTourBuilder);
     }
 
