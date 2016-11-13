@@ -11,7 +11,7 @@ public class User {
     private String occupation;
     private String gender;
     private Enums.interest[] interests;
-    private ArrayList<Integer> visitedArtifactIds;
+    private ArrayList<Long> visitedArtifactIds;
 
     public User(int age, String occupation, String gender, Enums.interest[] interests) {
         this.age = age;
@@ -53,11 +53,11 @@ public class User {
         this.interests = interests;
     }
 
-    public ArrayList<Integer> getVisitedArtifactIds() {
+    public ArrayList<Long> getVisitedArtifactIds() {
         return visitedArtifactIds;
     }
 
-    public void setVisitedArtifactIds(ArrayList<Integer> visitedArtifactIds) {
+    public void setVisitedArtifactIds(ArrayList<Long> visitedArtifactIds) {
         this.visitedArtifactIds = visitedArtifactIds;
     }
 
