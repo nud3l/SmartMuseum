@@ -8,7 +8,6 @@ import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
-import kth.id2209.homework1.pojo.Artifact;
 import kth.id2209.homework1.pojo.Enums;
 
 import java.io.IOException;
@@ -85,13 +84,31 @@ public class TourGuideAgent extends Agent {
                 return super.onEnd();
             }
         };
+
         // Add subbehaviour to accept and store accept messages from the profiler
+
         virtualTourBuilder.addSubBehaviour(new SimpleBehaviour() {
             private boolean finished = false;
+            private long startTime = 0;
+            private long elapsedTime = 0;
 
             @Override
             public void action() {
                 // Receive only profiler accept messages
+
+                if (startTime == 0) {
+                    startTime = System.currentTimeMillis();
+                    elapsedTime = startTime;
+                } else {
+                    elapsedTime = System.currentTimeMillis();
+
+                    if ((elapsedTime - startTime) > 15000) {
+                        System.out.println(getAgent().getAID() + " is quitting because of timeout");
+                        finished = true;
+                        reset();
+                    }
+                }
+
                 MessageTemplate profilerAcceptTemplate = MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL);
                 ACLMessage profilerAccept = myAgent.receive(profilerAcceptTemplate);
 
@@ -139,8 +156,10 @@ public class TourGuideAgent extends Agent {
             @Override
             public void action() {
                 // Receive only curator agree messages
-                MessageTemplate curatorAgreeTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
-                ACLMessage curatorAgree = myAgent.receive(curatorAgreeTemplate);
+                MessageTemplate agreeTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
+                MessageTemplate curatorTemplate = MessageTemplate.MatchSender(curator);
+                MessageTemplate template = MessageTemplate.and(agreeTemplate, curatorTemplate);
+                ACLMessage curatorAgree = myAgent.receive(template);
 
                 if (curatorAgree != null) {
                     finished = true;

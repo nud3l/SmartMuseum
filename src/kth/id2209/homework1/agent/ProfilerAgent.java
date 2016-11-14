@@ -15,6 +15,7 @@ import kth.id2209.homework1.pojo.User;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Created by tharidu on 11/9/16.
@@ -29,6 +30,7 @@ public class ProfilerAgent extends Agent {
     private AID[] tourAgents;
     private AID curator;
     private Long[] tour;
+    private int minimumTourAgentsToRespond;
 
     protected void setup() {
 
@@ -49,6 +51,8 @@ public class ProfilerAgent extends Agent {
         // Set other agents
         tourAgents = Utilities.searchDF(this, "tour-guide");
         curator = Utilities.getService(this, "curator");
+
+        minimumTourAgentsToRespond = (int) Math.ceil((double) tourAgents.length / 2D);
 
         // If invalid arguments or agents, exit with error
         if (curator == null || tourAgents.length == 0 || user == null)
@@ -93,6 +97,7 @@ public class ProfilerAgent extends Agent {
 
         SeqBehaviourTourAgent(ProfilerAgent agent) {
             this.agent = agent;
+            ArrayList<AID> respondedTourAgents = new ArrayList<>();
 
             // Initial request to tour agent
             addSubBehaviour(new OneShotBehaviour() {
@@ -111,25 +116,15 @@ public class ProfilerAgent extends Agent {
 
             // Response from tour agent and agreeing to the proposal
             addSubBehaviour(new SimpleBehaviour() {
-                boolean finished = false;
+                int replyCount = 0;
 
                 @Override
                 public void action() {
                     ACLMessage aclMessage = myAgent.receive(messageTemplate);
                     if (aclMessage != null) {
-                        finished = true;
                         if (aclMessage.getPerformative() == ACLMessage.PROPOSE) {
-                            ACLMessage reply = aclMessage.createReply();
-                            reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
-                            try {
-                                reply.setContentObject(agent.user.getInterests());
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            myAgent.send(reply);
-                            messageTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
-                        } else {
-                            reset();
+                            replyCount++;
+                            respondedTourAgents.add(aclMessage.getSender());
                         }
                     } else {
                         block();
@@ -138,11 +133,25 @@ public class ProfilerAgent extends Agent {
 
                 @Override
                 public boolean done() {
-                    return finished;
+                    return replyCount == agent.minimumTourAgentsToRespond;
                 }
             });
 
-            addSubBehaviour(new MsgReceiver(agent, messageTemplate, MsgReceiver.INFINITE, ds = new DataStore(), 0));
+            addSubBehaviour(new OneShotBehaviour() {
+                @Override
+                public void action() {
+                    try {
+                        int randomTourAgent = new Random().nextInt(respondedTourAgents.size());
+                        ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.ACCEPT_PROPOSAL, new AID[]{respondedTourAgents.get(randomTourAgent)}, agent.user.getInterests());
+                        agent.send(aclMessage);
+                        messageTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            addSubBehaviour(new MsgReceiver(agent, MessageTemplate.MatchPerformative(ACLMessage.AGREE), MsgReceiver.INFINITE, ds = new DataStore(), 0));
         }
 
         @Override
@@ -225,6 +234,8 @@ public class ProfilerAgent extends Agent {
                     if (ds.containsKey(RECV_ARTIFACT)) {
                         ArrayList<Artifact> artifacts = (ArrayList<Artifact>) ds.get(RECV_ARTIFACT);
                         System.out.println("----Artifacts received----");
+
+                        agent.user.setVisitedArtifactIds(new ArrayList<Long>(Arrays.asList(agent.tour)));
 
                         for (Artifact artifact :
                                 artifacts) {
