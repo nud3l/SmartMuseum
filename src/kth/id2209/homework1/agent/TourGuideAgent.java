@@ -60,12 +60,8 @@ public class TourGuideAgent extends Agent {
                         reply.setContentObject(interests);
                         myAgent.send(reply);
                     } catch (UnreadableException e) {
-                        reply.setPerformative(ACLMessage.REFUSE);
-                        myAgent.send(reply);
                         e.printStackTrace();
                     } catch (IOException e) {
-                        reply.setPerformative(ACLMessage.REFUSE);
-                        myAgent.send(reply);
                         e.printStackTrace();
                     }
 
