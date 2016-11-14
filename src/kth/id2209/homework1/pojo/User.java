@@ -6,6 +6,8 @@ import java.util.Arrays;
 /**
  * Created by tharidu on 11/9/16.
  */
+
+// POJO class for User
 public class User {
     private int age;
     private String occupation;

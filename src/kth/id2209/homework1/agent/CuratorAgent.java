@@ -4,6 +4,7 @@ import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
 import kth.id2209.homework1.pojo.Artifact;
 import jade.core.Agent;
@@ -18,41 +19,58 @@ import java.util.Iterator;
  * Created by tharidu on 11/9/16.
  */
 public class CuratorAgent extends Agent {
-    Hashtable<Integer, Artifact> artifactHashtableById;
-//    Hashtable<String, Artifact[]> artifactHashtableByInterests;
+    Hashtable<Long, Artifact> artifactHashtableById;
 
     protected void setup() {
+
+        // Register in Directory Facilitator
         try {
             DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "curator"));
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
 
+        System.out.println("Hello! Curator " + getAID().getName() + " is ready.");
+
         artifactHashtableById = new Hashtable<>();
-//        artifactHashtableByInterests = new Hashtable<>();
         artifactHashtableById = testArtifacts();
 
-        // Curator and profiler
+        // Curator and profiler - receive artifact ids and reply back with artifact objects
         addBehaviour(new CyclicBehaviour() {
             @Override
             public void action() {
-                ACLMessage aclMessage = myAgent.receive();
+                ACLMessage aclMessage = myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.QUERY_REF));
 
                 if (aclMessage != null) {
                     ACLMessage reply = aclMessage.createReply();
+                    Long[] artifactIds = new Long[0];
+                    ArrayList<Artifact> artifacts = new ArrayList<>();
 
-                    if (artifactHashtableById.containsKey(Integer.parseInt(aclMessage.getContent()))) {
-                        // Artifact found
-                        reply.setPerformative(ACLMessage.INFORM_REF);
-                        try {
-                            reply.setContentObject(artifactHashtableById.get(Integer.parseInt(aclMessage.getContent())));
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                    try {
+                        artifactIds = (Long[]) aclMessage.getContentObject();
+                    } catch (UnreadableException e) {
+                        e.printStackTrace();
+                    }
+
+                    // Add the matching artifacts given the id
+                    for (int i = 0; i < artifactIds.length; i++) {
+                        if (artifactHashtableById.containsKey(artifactIds[i])) {
+                            artifacts.add(artifactHashtableById.get(artifactIds[i]));
                         }
-                    } else {
+                    }
+
+                    if (artifacts.isEmpty()) {
                         // Not available
                         reply.setPerformative(ACLMessage.REFUSE);
                         reply.setContent("not-available");
+                    } else {
+                        // Artifact found
+                        reply.setPerformative(ACLMessage.INFORM_REF);
+                        try {
+                            reply.setContentObject(artifacts);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
 
                     myAgent.send(reply);
@@ -62,25 +80,26 @@ public class CuratorAgent extends Agent {
             }
         });
 
-        // Curator and tour guide
+        // Curator and tour guide - receive user interests and reply back with matching artifact ids
         addBehaviour(new CyclicBehaviour() {
             @Override
             public void action() {
-                ACLMessage aclMessage = myAgent.receive();
+                ACLMessage aclMessage = myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.REQUEST));
 
                 if (aclMessage != null) {
                     ACLMessage reply = aclMessage.createReply();
                     try {
                         Enums.interest[] interests = (Enums.interest[]) aclMessage.getContentObject();
-                        ArrayList<Artifact> artifacts = new ArrayList<>();
+                        ArrayList<Long> artifacts = new ArrayList<>();
 
+                        // Add all matching artifacts
                         for (Enums.interest interest :
                                 interests) {
                             artifacts.addAll(returnByInterests(interest));
                         }
 
-                        Artifact[] artifactsArr = new Artifact[artifacts.size()];
-                        reply.setContentObject(artifacts.toArray(artifactsArr));
+                        Long[] artifactsIdArr = new Long[artifacts.size()];
+                        reply.setContentObject(artifacts.toArray(artifactsIdArr));
                         reply.setPerformative(ACLMessage.AGREE);
                     } catch (UnreadableException e) {
                         e.printStackTrace();
@@ -103,36 +122,39 @@ public class CuratorAgent extends Agent {
         }
     }
 
-    public Hashtable<Integer, Artifact> testArtifacts() {
-        Hashtable<Integer, Artifact> artifactHashtableById = new Hashtable<>();
+    // Load sample artifacts
+    public Hashtable<Long, Artifact> testArtifacts() {
+        Hashtable<Long, Artifact> artifactHashtableById = new Hashtable<>();
 
-        artifactHashtableById.put(1, new Artifact(1, "Mona Lisa", "Leonardo da Vinci", 1505, "Italy", "portrait",
+        artifactHashtableById.put(1L, new Artifact(1, "Mona Lisa", "Leonardo da Vinci", 1505, "Italy", "portrait",
                 new Enums.interest[]{Enums.interest.portrait, Enums.interest.woman}));
-        artifactHashtableById.put(2, new Artifact(2, "Girl with a Pearl Earring", "Jan Vermeer", 1665, "Netherlands", "portrait",
+        artifactHashtableById.put(2L, new Artifact(2, "Girl with a Pearl Earring", "Jan Vermeer", 1665, "Netherlands", "portrait",
                 new Enums.interest[]{Enums.interest.portrait, Enums.interest.woman}));
-        artifactHashtableById.put(3, new Artifact(3, "The Starry Night", "Vincent van Gough", 1889, "France", "landscape art",
+        artifactHashtableById.put(3L, new Artifact(3, "The Starry Night", "Vincent van Gough", 1889, "France", "landscape art",
                 new Enums.interest[]{Enums.interest.landscape}));
-        artifactHashtableById.put(4, new Artifact(4, "The Night Watch", "Rembrandt", 1642, "Netherlands", "portrait",
+        artifactHashtableById.put(4L, new Artifact(4, "The Night Watch", "Rembrandt", 1642, "Netherlands", "portrait",
                 new Enums.interest[]{Enums.interest.portrait}));
-        artifactHashtableById.put(4, new Artifact(5, "Sunflowers", "Vincent van Gough", 1888, "Netherlands", "still life",
+        artifactHashtableById.put(4L, new Artifact(5, "Sunflowers", "Vincent van Gough", 1888, "Netherlands", "still life",
                 new Enums.interest[]{Enums.interest.still_life, Enums.interest.flower}));
 
         return artifactHashtableById;
     }
 
-    public ArrayList<Artifact> returnByInterests(Enums.interest interest) {
-        ArrayList<Artifact> matchingArtifacts = new ArrayList<>();
-        Iterator<Integer> iterator = artifactHashtableById.keySet().iterator();
-        Integer key;
+    // Helper method for matching interests with artifacts
+    public ArrayList<Long> returnByInterests(Enums.interest interest) {
+        ArrayList<Long> matchingArtifacts = new ArrayList<>();
+        Iterator<Long> iterator = artifactHashtableById.keySet().iterator();
+        Long key;
         Artifact artifact;
 
         while (iterator.hasNext()) {
             key = iterator.next();
             artifact = artifactHashtableById.get(key);
             if (artifact.matchCategory(interest)) {
-                matchingArtifacts.add(artifact);
+                matchingArtifacts.add(artifact.getId());
             }
         }
+
         return matchingArtifacts;
     }
 }

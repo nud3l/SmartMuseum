@@ -6,6 +6,8 @@ import java.util.Arrays;
 /**
  * Created by tharidu on 11/9/16.
  */
+
+// POJO class for Artifact
 public class Artifact implements Serializable {
     private long id;
     private String name;

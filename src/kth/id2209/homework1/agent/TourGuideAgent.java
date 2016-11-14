@@ -34,14 +34,13 @@ public class TourGuideAgent extends Agent {
         // Register virtual tour service in the yellow pages
         try {
             DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "tour-guide"));
-        }
-        catch (FIPAException fe) {
+        } catch (FIPAException fe) {
             fe.printStackTrace();
         }
 
         curator = Utilities.getService(this, "curator");
 
-        System.out.println("Hello! Tour Guide "+getAID().getName()+" is ready.");
+        System.out.println("Hello! Tour Guide " + getAID().getName() + " is ready.");
 
         // Listen for requests from profiler
         addBehaviour(new CyclicBehaviour() {
@@ -76,7 +75,7 @@ public class TourGuideAgent extends Agent {
                 }
 
             }
-         });
+        });
 
         // Build virtual tour for profiler with looping sequential behaviour
         SequentialBehaviour virtualTourBuilder = new SequentialBehaviour() {
@@ -100,7 +99,7 @@ public class TourGuideAgent extends Agent {
                     // Store profiler accept request
                     System.out.println("Got accept from profiler");
                     setProfilerMessage(profilerAccept);
-
+                    finished = true;
                 } else {
                     block();
                 }
@@ -134,35 +133,51 @@ public class TourGuideAgent extends Agent {
         });
 
         // Add subbehaviour to receive artifacts from curator and send tour to profiler
-        virtualTourBuilder.addSubBehaviour(new OneShotBehaviour() {
+        virtualTourBuilder.addSubBehaviour(new SimpleBehaviour() {
+            boolean finished = false;
+
             @Override
             public void action() {
-                // Get initial profiler accept message from datastore
-                ACLMessage profilerAccept = getProfilerMessage();
-                System.out.println("Preparing virtual tour");
-
-                // Send message to profiler
-                ACLMessage reply = profilerAccept.createReply();
-
                 // Receive only curator agree messages
                 MessageTemplate curatorAgreeTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
                 ACLMessage curatorAgree = myAgent.receive(curatorAgreeTemplate);
-                // Get artifacts from curator
-                try {
-                    ArrayList<Artifact> artifacts = (ArrayList<Artifact>) curatorAgree.getContentObject();
 
-                    Long[] tour = new Long[artifacts.size()];
-                    int count = 0;
-                    for (Artifact artifact : artifacts){
-                        tour[count] = artifact.getId();
-                        count++;
+                if (curatorAgree != null) {
+                    finished = true;
+
+                    // Get initial profiler accept message from datastore
+                    ACLMessage profilerAccept = getProfilerMessage();
+                    System.out.println("Preparing virtual tour");
+
+                    // Send message to profiler
+                    ACLMessage reply = profilerAccept.createReply();
+
+                    // Get artifacts from curator
+                    try {
+                        Long[] artifacts = (Long[]) curatorAgree.getContentObject();
+
+//                    Long[] tour = new Long[artifacts.size()];
+//                    int count = 0;
+//                    for (Artifact artifact : artifacts){
+//                        tour[count] = artifact.getId();
+//                        count++;
+//                    }
+                        reply.setPerformative(ACLMessage.AGREE);
+                        reply.setContentObject(artifacts);
+                        send(reply);
+                    } catch (UnreadableException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    reply.setContentObject(tour);
-                } catch (UnreadableException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } else {
+                    block();
                 }
+            }
+
+            @Override
+            public boolean done() {
+                return finished;
             }
         });
         addBehaviour(virtualTourBuilder);
@@ -172,10 +187,9 @@ public class TourGuideAgent extends Agent {
         // Deregister from the yellow pages
         try {
             DFService.deregister(this);
-        }
-        catch (FIPAException fe) {
+        } catch (FIPAException fe) {
             fe.printStackTrace();
         }
-        System.out.println("Tour Guide "+getAID().getName()+" terminating.");
+        System.out.println("Tour Guide " + getAID().getName() + " terminating.");
     }
 }

@@ -7,11 +7,14 @@ import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.core.Agent;
+import jade.lang.acl.UnreadableException;
 import jade.proto.states.MsgReceiver;
+import kth.id2209.homework1.pojo.Artifact;
 import kth.id2209.homework1.pojo.User;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by tharidu on 11/9/16.
@@ -19,89 +22,38 @@ import java.util.ArrayList;
 public class ProfilerAgent extends Agent {
     private static final String STATE_A = "A";
     private static final String STATE_B = "B";
-    private static final String STATE_C = "C";
     private static final String RECV_ARTIFACT = "received-artifact";
-    private MessageTemplate messageTemplate;
-    private User user;
     private static final int TIMEOUT = 5000;
-    public static final String ONTOLOGY = "English";
 
+    private User user;
     private AID[] tourAgents;
     private AID curator;
+    private Long[] tour;
 
     protected void setup() {
+
+        // Register in Directory Facilitator
         try {
             DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "profiler"));
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
 
+        System.out.println("Hello! Profiler " + getAID().getName() + " is ready.");
+
+        // Set user
         user = (User) getArguments()[0];
 
+        System.out.println("----User interests are " + Arrays.toString(user.getInterests()) + "----");
+
+        // Set other agents
         tourAgents = Utilities.searchDF(this, "tour-guide");
         curator = Utilities.getService(this, "curator");
 
+        // If invalid arguments or agents, exit with error
         if (curator == null || tourAgents.length == 0 || user == null)
             System.exit(1);
 
-//        FSMBehaviour fsmBehaviour = new FSMBehaviour();
-//
-//        fsmBehaviour.registerFirstState(new OneShotBehaviour() {
-//            @Override
-//            public void action() {
-//                ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.QUERY_REF, new AID[]{curator}, ONTOLOGY, "blabla");
-//                aclMessage.setReplyWith("req" + System.currentTimeMillis());
-//                myAgent.send(aclMessage);
-//                messageTemplate = MessageTemplate.MatchInReplyTo(aclMessage.getReplyWith());
-//            }
-//        }, STATE_A);
-//
-//        Behaviour behaviour = new SimpleBehaviour() {
-//            boolean receivedMessage = false;
-//
-//            @Override
-//            public void action() {
-//                ACLMessage reply = myAgent.receive(messageTemplate);
-//
-//                if (reply != null) {
-//                    if (reply.getPerformative() == ACLMessage.INFORM_REF) {
-//                        getDataStore().put(RECV_ARTIFACT, reply);
-//                    } else if (reply.getPerformative() == ACLMessage.REFUSE) {
-//                        System.out.println("No matching artifact");
-//                    }
-//                    receivedMessage = true;
-//                } else {
-//                    block();
-//                }
-//            }
-//
-//            @Override
-//            public boolean done() {
-//                return receivedMessage;
-//            }
-//        };
-//
-//        behaviour.setDataStore(fsmBehaviour.getDataStore());
-//        fsmBehaviour.registerState(behaviour, STATE_B);
-//
-//        behaviour = new OneShotBehaviour() {
-//            @Override
-//            public void action() {
-//                if (getDataStore().containsKey(RECV_ARTIFACT)) {
-//                    System.out.println("Artifact received");
-//                } else {
-//                    System.out.println("*****Artifact not received");
-//                }
-//            }
-//        };
-//
-//        behaviour.setDataStore(fsmBehaviour.getDataStore());
-//        fsmBehaviour.registerLastState(behaviour, STATE_C);
-//
-//        fsmBehaviour.registerDefaultTransition(STATE_A, STATE_B);
-//        fsmBehaviour.registerDefaultTransition(STATE_B, STATE_C);
-//
-//        addBehaviour(fsmBehaviour);
         addBehaviour(new ProfilerInteractionWake(this, TIMEOUT));
     }
 
@@ -115,24 +67,25 @@ public class ProfilerAgent extends Agent {
 
         @Override
         protected void onWake() {
+            // Start profiler behaviour after the timeout
             agent.addBehaviour(new ProfilerInteractionFSM(agent));
         }
     }
 
     private static class ProfilerInteractionFSM extends FSMBehaviour {
-        ArrayList<Integer> artifactList;
 
         public ProfilerInteractionFSM(ProfilerAgent a) {
             super(a);
-            artifactList = new ArrayList<>();
 
-            registerFirstState(new SeqBehaviourTourAgent(a), "1");
-            registerLastState(new SeqBehaviourCurator(a), "2");
+            // Register FSM states
+            registerFirstState(new SeqBehaviourTourAgent(a), STATE_A);
+            registerLastState(new SeqBehaviourCurator(a), STATE_B);
 
-            registerDefaultTransition("1", "2");
+            registerDefaultTransition(STATE_A, STATE_B);
         }
     }
 
+    // Sequential behaviour with tour agent
     private static class SeqBehaviourTourAgent extends SequentialBehaviour {
         ProfilerAgent agent;
         MessageTemplate messageTemplate;
@@ -141,11 +94,12 @@ public class ProfilerAgent extends Agent {
         SeqBehaviourTourAgent(ProfilerAgent agent) {
             this.agent = agent;
 
+            // Initial request to tour agent
             addSubBehaviour(new OneShotBehaviour() {
                 @Override
                 public void action() {
                     try {
-                        ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.REQUEST, agent.tourAgents, ONTOLOGY, agent.user.getInterests());
+                        ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.REQUEST, agent.tourAgents, agent.user.getInterests());
                         aclMessage.setReplyWith("req" + System.currentTimeMillis());
                         agent.send(aclMessage);
                         messageTemplate = MessageTemplate.MatchInReplyTo(aclMessage.getReplyWith());
@@ -155,18 +109,58 @@ public class ProfilerAgent extends Agent {
                 }
             });
 
+            // Response from tour agent and agreeing to the proposal
+            addSubBehaviour(new SimpleBehaviour() {
+                boolean finished = false;
+
+                @Override
+                public void action() {
+                    ACLMessage aclMessage = myAgent.receive(messageTemplate);
+                    if (aclMessage != null) {
+                        finished = true;
+                        if (aclMessage.getPerformative() == ACLMessage.PROPOSE) {
+                            ACLMessage reply = aclMessage.createReply();
+                            reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
+                            try {
+                                reply.setContentObject(agent.user.getInterests());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            myAgent.send(reply);
+                            messageTemplate = MessageTemplate.MatchPerformative(ACLMessage.AGREE);
+                        } else {
+                            reset();
+                        }
+                    } else {
+                        block();
+                    }
+                }
+
+                @Override
+                public boolean done() {
+                    return finished;
+                }
+            });
+
             addSubBehaviour(new MsgReceiver(agent, messageTemplate, MsgReceiver.INFINITE, ds = new DataStore(), 0));
         }
 
         @Override
         public int onEnd() {
-            Object o = ds.get(0);
-            //TODO - get the tour and save to a state in FSM
+            ACLMessage aclMessage = (ACLMessage) ds.get(0);
+            try {
+                // Receive artifact IDs relevant to user's interests
+                agent.tour = (Long[]) aclMessage.getContentObject();
+                System.out.println("----Tour received from the tour agent----");
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+            }
 
             return 0;
         }
     }
 
+    // Sequential behaviour with curator
     private static class SeqBehaviourCurator extends SequentialBehaviour {
         ProfilerAgent agent;
         MessageTemplate messageTemplate;
@@ -176,16 +170,26 @@ public class ProfilerAgent extends Agent {
             this.agent = agent;
             ds = new DataStore();
 
+            // Send the tour to curator
             addSubBehaviour(new OneShotBehaviour() {
                 @Override
                 public void action() {
-                    ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.QUERY_REF, new AID[]{agent.curator}, ONTOLOGY, "blabla");
+                    System.out.println("----Contacting curator for detailed information about the tour----");
+
+                    ACLMessage aclMessage = null;
+                    try {
+                        aclMessage = Utilities.createAclMessage(ACLMessage.QUERY_REF, new AID[]{agent.curator}, agent.tour);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                     aclMessage.setReplyWith("req" + System.currentTimeMillis());
                     myAgent.send(aclMessage);
                     messageTemplate = MessageTemplate.MatchInReplyTo(aclMessage.getReplyWith());
                 }
             });
 
+            // Receive artifact details on the tour
             addSubBehaviour(new SimpleBehaviour() {
                 boolean receivedMessage = false;
 
@@ -195,7 +199,11 @@ public class ProfilerAgent extends Agent {
 
                     if (reply != null) {
                         if (reply.getPerformative() == ACLMessage.INFORM_REF) {
-                            ds.put(RECV_ARTIFACT, reply);
+                            try {
+                                ds.put(RECV_ARTIFACT, reply.getContentObject());
+                            } catch (UnreadableException e) {
+                                e.printStackTrace();
+                            }
                         } else if (reply.getPerformative() == ACLMessage.REFUSE) {
                             System.out.println("No matching artifact");
                         }
@@ -215,9 +223,15 @@ public class ProfilerAgent extends Agent {
                 @Override
                 public void action() {
                     if (ds.containsKey(RECV_ARTIFACT)) {
-                        System.out.println("Artifact received");
+                        ArrayList<Artifact> artifacts = (ArrayList<Artifact>) ds.get(RECV_ARTIFACT);
+                        System.out.println("----Artifacts received----");
+
+                        for (Artifact artifact :
+                                artifacts) {
+                            System.out.println(artifact.toString());
+                        }
                     } else {
-                        System.out.println("*****Artifact not received");
+                        System.out.println("****Artifacts not received****");
                     }
                 }
             });

@@ -16,6 +16,8 @@ import java.io.Serializable;
  * Created by tharidu on 11/10/16.
  */
 public class Utilities {
+
+    // Helper method for building DF agent
     public static DFAgentDescription buildDFAgent(AID aid, String localName, String type) {
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(aid);
@@ -27,6 +29,7 @@ public class Utilities {
         return dfd;
     }
 
+    // Helper method for getting AID for given service
     public static AID getService(Agent agent, String service) {
         DFAgentDescription dfd = new DFAgentDescription();
         ServiceDescription sd = new ServiceDescription();
@@ -42,6 +45,7 @@ public class Utilities {
         return null;
     }
 
+    // Helper method for getting multiple AIDs for given service
     public static AID[] searchDF(Agent agent, String service) {
         DFAgentDescription dfd = new DFAgentDescription();
         ServiceDescription sd = new ServiceDescription();
@@ -65,27 +69,29 @@ public class Utilities {
         return null;
     }
 
-    public static ACLMessage createAclMessage(int performative, AID[] receivers, String ontology, String content) {
+    // Helper method for creating ACL message with string content
+    public static ACLMessage createAclMessage(int performative, AID[] receivers, String content) {
         ACLMessage aclMessage = new ACLMessage(performative);
         aclMessage.setContent(content);
+        aclMessage.setLanguage("English");
 
         for (AID receiver : receivers) {
             aclMessage.addReceiver(receiver);
         }
 
-        aclMessage.setOntology(ontology);
         return aclMessage;
     }
 
-    public static ACLMessage createAclMessage(int performative, AID[] receivers, String ontology, Serializable contentObject) throws IOException {
+    // Helper method for creating ACL message with serializable object
+    public static ACLMessage createAclMessage(int performative, AID[] receivers, Serializable contentObject) throws IOException {
         ACLMessage aclMessage = new ACLMessage(performative);
         aclMessage.setContentObject(contentObject);
+        aclMessage.setLanguage("English");
 
         for (AID receiver : receivers) {
             aclMessage.addReceiver(receiver);
         }
 
-        aclMessage.setOntology(ontology);
         return aclMessage;
     }
 }
