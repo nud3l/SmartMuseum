@@ -12,7 +12,7 @@ import kth.id2209.homework1.pojo.Artifact;
 import kth.id2209.homework1.pojo.Enums;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 
 /**
  * Created by tharidu on 11/9/16.
@@ -155,15 +155,10 @@ public class TourGuideAgent extends Agent {
                     // Get artifacts from curator
                     try {
                         Long[] artifacts = (Long[]) curatorAgree.getContentObject();
-
-//                    Long[] tour = new Long[artifacts.size()];
-//                    int count = 0;
-//                    for (Artifact artifact : artifacts){
-//                        tour[count] = artifact.getId();
-//                        count++;
-//                    }
+                        Set<Long> set = new LinkedHashSet<>(Arrays.asList(artifacts));
+                        artifacts = new Long[set.size()];
                         reply.setPerformative(ACLMessage.AGREE);
-                        reply.setContentObject(artifacts);
+                        reply.setContentObject(set.toArray(artifacts));
                         send(reply);
                     } catch (UnreadableException e) {
                         e.printStackTrace();
