@@ -160,7 +160,7 @@ public class ProfilerAgent extends Agent {
             try {
                 // Receive artifact IDs relevant to user's interests
                 agent.tour = (Long[]) aclMessage.getContentObject();
-                System.out.println("----Tour received from the tour agent----");
+                System.out.println("----" + agent.getLocalName() + " - Tour received from the tour agent - " + aclMessage.getSender().getLocalName() + "----");
             } catch (UnreadableException e) {
                 e.printStackTrace();
             }
@@ -234,7 +234,7 @@ public class ProfilerAgent extends Agent {
                     if (ds.containsKey(RECV_ARTIFACT)) {
                         ArrayList<Artifact> artifacts = (ArrayList<Artifact>) ds.get(RECV_ARTIFACT);
                         System.out.println("----Artifacts received----");
-
+                        System.out.println(agent.getLocalName());
                         agent.user.setVisitedArtifactIds(new ArrayList<Long>(Arrays.asList(agent.tour)));
 
                         for (Artifact artifact :

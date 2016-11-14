@@ -29,19 +29,20 @@ public class Main {
 
         Profile aProfile = new ProfileImpl(ipAddress, PORT, null);
         AgentContainer agentContainer = runtime.createAgentContainer(aProfile);
+
+        // Create curator
         agentContainer.createNewAgent("curator", PKG + ".CuratorAgent", new Object[0]).start();
 
-        for (int i = 0; i < 2; i++) {
+        // Create 3 tour agents
+        for (int i = 0; i < 3; i++) {
             agentContainer.createNewAgent("tourguide" + i, PKG + ".TourGuideAgent", new Object[0]).start();
         }
 
+        // Create 2 profiler agents
         agentContainer.createNewAgent("profiler0", PKG + ".ProfilerAgent",
                 new Object[]{new User(21, "j1", "male", new Enums.interest[]{Enums.interest.portrait, Enums.interest.woman})}).start();
+
         agentContainer.createNewAgent("profiler1", PKG + ".ProfilerAgent",
                 new Object[]{new User(40, "j2", "female", new Enums.interest[]{Enums.interest.landscape})}).start();
-//        for (int i = 0; i < 2; i++) {
-//            agentContainer.createNewAgent("profiler" + i, PKG + ".ProfilerAgent",
-//                    new Object[]{new User(21, "j1", "male", new Enums.interest[]{Enums.interest.portrait, Enums.interest.woman})}).start();
-//        }
     }
 }
