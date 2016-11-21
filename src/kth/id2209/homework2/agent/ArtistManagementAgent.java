@@ -73,7 +73,7 @@ public class ArtistManagementAgent extends Agent {
 
         DutchAuction(ArtistManagementAgent agent) {
             this.agent = agent;
-            ArrayList<AID> respondedCurators = new ArrayList<>();
+            // ArrayList<AID> respondedCurators = new ArrayList<>();
             Auction artifact = agent.auctionsbyName.get("Mona Lisa");
 
             // ACLMessage INFORM
@@ -83,7 +83,7 @@ public class ArtistManagementAgent extends Agent {
                     ACLMessage aclMessage = Utilities.createAclMessage(
                             ACLMessage.INFORM,
                             agent.curators,
-                            ("Auction start of " + artifact.getArtworkName())
+                            ("START " + artifact.getArtworkName())
                     );
                     agent.send(aclMessage);
                 }
@@ -117,7 +117,7 @@ public class ArtistManagementAgent extends Agent {
                                 ACLMessage aclMessage = Utilities.createAclMessage(
                                         ACLMessage.INFORM,
                                         agent.curators,
-                                        ("No bids " + artifact.getArtworkName())
+                                        ("NO BIDS " + artifact.getArtworkName())
                                 );
                                 agent.send(aclMessage);
                                 step = 3;
@@ -128,7 +128,7 @@ public class ArtistManagementAgent extends Agent {
                         case 1:
                             int repliesCount = 0;
 
-                            ACLMessage proposal = myAgent.receive(messageTemplate);
+                            ACLMessage proposal = agent.receive(messageTemplate);
                             if (proposal != null) {
                                 // Exclude not understood curators from auction
                                 if (proposal.getPerformative() == ACLMessage.NOT_UNDERSTOOD) {
@@ -198,7 +198,7 @@ public class ArtistManagementAgent extends Agent {
             });
         }
     }
-    
+
 
 
     protected void takeDown() {
