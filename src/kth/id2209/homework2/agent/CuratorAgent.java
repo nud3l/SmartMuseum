@@ -3,6 +3,7 @@ package kth.id2209.homework2.agent;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.DFService;
@@ -21,9 +22,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * Bidder -> need to be multiple
  */
 public class CuratorAgent extends Agent{
-    private int myBalance = ThreadLocalRandom.current().nextInt(100000, 5000000 + 1);
+    private int myBalance = ThreadLocalRandom.current().nextInt(1000000, 5000000 + 1);
     private ArrayList<String> interests;
-    private ArrayList<String> artifacts;
+    private ArrayList<String> artifacts = new ArrayList<>();
 
     protected void setup() {
         // Register in Directory Facilitator
@@ -35,7 +36,8 @@ public class CuratorAgent extends Agent{
 
         System.out.println("Hello! Curator " + getAID().getName() + " is ready.");
 
-        interests = testInterests(3);
+        interests = testInterests(2);
+        System.out.println("Curator interests " + interests);
 
         addBehaviour(new DutchAuctionBidder(this));
 
@@ -54,23 +56,32 @@ public class CuratorAgent extends Agent{
                 public void action() {
                     MessageTemplate InformTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
                     ACLMessage inform = agent.receive(InformTemplate);
-                    String content = inform.getContent();
-                    if (content.contains("START")) {
-                        artifact = content.replace("START ", "");
-                        if (agent.interests.contains(artifact)) {
-                            interested = true;
-                            myvalue = ThreadLocalRandom.current().nextInt(100000, 1500000 + 1);
-                        } else {
-                            interested = false;
-                            myvalue = ThreadLocalRandom.current().nextInt(10000, 40000 + 1);
+                    if (inform != null) {
+                        String content = inform.getContent();
+                        if (content.contains("START")) {
+                            artifact = content.replace("START ", "");
+                            System.out.println("Curator INFORM START " + artifact);
+                            if (agent.interests.contains(artifact)) {
+                                interested = true;
+                                myvalue = ThreadLocalRandom.current().nextInt(1000000, 1500000 + 1);
+
+                            } else {
+                                interested = false;
+                                myvalue = ThreadLocalRandom.current().nextInt(100000, 400000 + 1);
+                            }
+
+                        } else if (content.contains("NO BIDS")) {
+                            String contentArtifact = content.replace("NO BIDS ", "");
+                            if (contentArtifact.equals(artifact)) {
+                                System.out.println("Curator NO BIDS " + artifact);
+                                artifact = null;
+                                interested = false;
+                            }
                         }
-                    } else if (content.contains("NO BIDS")) {
-                        String contentArtifact = content.replace("NO BIDS ", "");
-                        if (contentArtifact.equals(artifact)) {
-                            artifact = null;
-                            interested = false;
-                        }
+                    } else {
+                        block();
                     }
+
                 }
             });
 
@@ -93,17 +104,20 @@ public class CuratorAgent extends Agent{
                             ACLMessage cfp = agent.receive(CFPTemplate);
                             if (cfp != null) {
                                 if (cfp.getContent() != null) {
+                                    auctionRound += 1;
                                     // read in current/start price
+                                    String content = cfp.getContent();
+                                    System.out.println("Curator CURRENT PRICE " + content);
                                     if (startPrice == 0) {
-                                        startPrice = Integer.valueOf(cfp.getContent());
+                                        startPrice = Integer.parseInt(content);
                                         currentPrice = startPrice;
                                     } else {
-                                        currentPrice = Integer.valueOf(cfp.getContent());
+                                        currentPrice = Integer.parseInt(content);
                                     }
                                     // Assume values that other curators might have based on rounds
                                     for (int i = 0; i < curators.length; i++) {
                                         if (curators[i] != agent.getAID()) {
-                                            curatorsValues.add(ThreadLocalRandom.current().nextInt(10000, 1500000 + 1));
+                                            curatorsValues.add(ThreadLocalRandom.current().nextInt(100000, 500000 + 1));
                                         }
                                     }
                                     // Determine
@@ -111,17 +125,21 @@ public class CuratorAgent extends Agent{
                                     ACLMessage propose = cfp.createReply();
                                     propose.setPerformative(ACLMessage.PROPOSE);
                                     // Different strategies
-                                    if (interested) {
-                                        // We are interested
-                                        if (currentPrice < myvalue
-                                                && currentPrice < agent.myBalance
-                                                && auctionRound > 3) {
-                                            propose.setContent("YES");
-                                            step = 1;
-                                        }
-                                    } else if (currentPrice < minCurators
-                                            && currentPrice < agent.myBalance
-                                            && auctionRound > 5) {
+                                    System.out.println("Curator MY VALUE " + myvalue);
+                                    System.out.println("Curator INTERESTED " + interested);
+                                    System.out.println("Curator MY BALANCE " + agent.myBalance);
+                                    System.out.println("Curator AUCTION ROUND " + auctionRound);
+                                    if (
+                                            interested
+                                            && (currentPrice < myvalue)
+                                            && (currentPrice < agent.myBalance)
+                                            && (auctionRound > 2)) {
+                                        propose.setContent("YES");
+                                        step = 1;
+                                    } else if (
+                                            (currentPrice < minCurators)
+                                            && (currentPrice < agent.myBalance)
+                                            && (auctionRound > 3)) {
                                         // We might get a bargain
                                         propose.setContent("YES");
                                         step = 1;
@@ -130,11 +148,13 @@ public class CuratorAgent extends Agent{
                                         propose.setContent("NO");
                                         step = 0;
                                     }
+                                    System.out.println("Curator PROPOSE " + artifact + "; Decision: " + propose.getContent());
                                     agent.send(propose);
                                 } else {
                                     // send do not understand message
                                     ACLMessage notUnderstood = cfp.createReply();
                                     notUnderstood.setPerformative(ACLMessage.NOT_UNDERSTOOD);
+                                    System.out.println("Curator NOT_UNDERSTOOD " + artifact);
                                     agent.send(notUnderstood);
                                     // Exit current bidding
                                     step = 2;
@@ -159,8 +179,11 @@ public class CuratorAgent extends Agent{
                                     agent.interests.remove(artifact);
                                     agent.artifacts.add(artifact);
                                     step = 2;
+                                    System.out.println("Curator MY NEW BALANCE " + agent.myBalance);
+                                    System.out.println("Curator I GOT " + artifact);
                                 } else {
                                     // Handle rejected
+                                    System.out.println("Curator I DIDN'T GET " + artifact);
                                     step = 0;
                                 }
                             }

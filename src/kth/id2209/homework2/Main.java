@@ -14,11 +14,11 @@ import java.net.UnknownHostException;
  */
 public class Main {
     private static final String PKG = "kth.id2209.homework2.agent";
-    public static final int PORT = 1099;
+    public static final int PORT = 60000;
 
     public static void main(String[] args) throws UnknownHostException, StaleProxyException {
-        String ipAddress = InetAddress.getLocalHost().getHostAddress();
-
+        // String ipAddress = InetAddress.getLocalHost().getHostAddress();
+        String ipAddress = "127.0.0.1";
         Runtime runtime = Runtime.instance();
         runtime.setCloseVM(true);
 
@@ -28,12 +28,12 @@ public class Main {
         Profile aProfile = new ProfileImpl(ipAddress, PORT, null);
         AgentContainer agentContainer = runtime.createAgentContainer(aProfile);
 
-        // Create artist manager
-        agentContainer.createNewAgent("artistmanager", PKG + ".ArtistManagementAgent", new Object[0]).start();
-
         // Create 3 curators
         for (int i = 0; i < 3; i++) {
             agentContainer.createNewAgent("curator" + i, PKG + ".CuratorAgent", new Object[0]).start();
         }
+
+        // Create artist manager
+        agentContainer.createNewAgent("artistmanager", PKG + ".ArtistManagementAgent", new Object[0]).start();
     }
 }
