@@ -1,6 +1,62 @@
 # SmartMuseum
-ID2209 Homework 1
+# Homework 2
+## Task 1
+### [Auctioneer] -> Agent
+- Parameters
+ - Initial price
+ - Artwork name
+ - Reserve price
+ - Rate of reduction
+- Responsibilities
+ 1. Search for "Bidding" service -> is of bidder Agent
+ 2. ACLMessage INFORM
+ 3. Behaviour -> CFP -> Reserve price
+   1. Initial price
+   2. Modified price
+ 4. Behaviour
+   - Handle propose messages (modify price, rate of reduction)
+   - Handle not udnerstood messages
+   - Send ACCEPT_PROPOSAL
+   - Send REJECT_PROPOSAL
 
+
+ ### [Bidder] -> Agent
+ 1. Register service in DF
+ 2. Receive INFORM
+ 3. Behaviour
+   - Handle CFP
+   - Handle accepted proposal
+   - Handle rejected proposal
+ - Handle two strategies
+
+2 scenarios with at least 4 agents
+
+## Task 2
+Agents = {Profiler, Curator, ArtistManager}
+
+Outcomes
+- High quality
+- Low quality
+
+Actions
+- ArtistManager
+  - Sell high
+  - Sell low
+- Curator
+  - Quote based on demand
+  - Quote based on interest
+- Profiler
+  - view
+  - not view
+
+Each combination of actions:
+{ArtistManager, Curator, Profiler} eg.:
+{Sell high quality, Quote price on demand, view}
+- develop preferences
+ - Payoff matrix
+
+
+# Homework 1
 ## Tour Guide Agent
 1. Register "virtual tour" service
 2. Add behaviour to listen for requests from profiler agent
