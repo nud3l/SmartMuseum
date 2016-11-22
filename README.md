@@ -21,6 +21,8 @@
   - ACLMessage (array[(2,0),(0,1),(3,2)])
   - find position (1,3) -> safe
   - Final (array[(2,0),(0,1),(3,2),(1,3)])
+
+
 In any case, where we don't find a safe position
 - Message to previous queen to move
 
