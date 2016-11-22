@@ -1,4 +1,52 @@
 # SmartMuseum
+# Homework 3
+## Task 1
+4 x 4 example (N = 4)
+1. Register queens in the game: Queen0, Queen1, Queen2, Queen3
+2. Queen0
+  - filled positions (array[])
+    - (2, 0) -> safe
+    - Send message to Queen1 (array[(2,0)])
+3. Queen1
+  - ACLMessage (array[(2,0)])
+  - Strategy (0,1)
+  - save or not (not on row, column, diagonal)
+  - Send message to Queen2 (array[(2,0),(0,1)])
+4. Queen2
+  - ACLMessage (array[(2,0),(0,1)])
+  - find position (0,2) -> not safe
+  - find position (3,2) -> safe
+  - Send message to Queen3 (array[(2,0),(0,1),(3,2)])
+5. Queen3
+  - ACLMessage (array[(2,0),(0,1),(3,2)])
+  - find position (1,3) -> safe
+  - Final (array[(2,0),(0,1),(3,2),(1,3)])
+In any case, where we don't find a safe position
+- Message to previous queen to move
+
+## Task 2
+- ControllerAgent and ControllerAgentGUI
+  - Issue clone/move commands
+  - Create containers
+  - ControllerAgent -> Mobile Agent
+    - move -> doMove, beforeMove, afterMove
+    - clone -> doClone, beforeClone, afterClone
+  - Implement GUI
+- Mobile Agents
+  - MobileAgent
+  - MobileAgentGUI
+  - Adjust ArtistManager (Auctioneer)
+  - Adjust Curator (Bidder)
+  - Implement doMove, beforeMove, ..., auctionLogic
+  - Implement GUI
+- Main Container: ControllerAgent
+- Container 1: ArtistManager (clones 2)
+  - One clones moves to container 2 and the other to 3
+- Container 2: Curator (clones 2)
+- Container 3: Curator (clones 2)
+- Conduct auction in both containers
+- Clones return to container 1 and decide on best price
+
 # Homework 2
 ## Task 1
 ### [Auctioneer] -> Agent
