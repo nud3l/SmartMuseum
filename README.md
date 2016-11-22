@@ -2,6 +2,7 @@
 # Homework 3
 ## Task 1
 4 x 4 example (N = 4)
+
 1. Register queens in the game: Queen0, Queen1, Queen2, Queen3
 2. Queen0
   - filled positions (array[])
