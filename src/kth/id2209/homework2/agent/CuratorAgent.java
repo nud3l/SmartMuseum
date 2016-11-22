@@ -181,10 +181,10 @@ public class CuratorAgent extends Agent{
                                     step = 2;
                                     System.out.println("Curator MY NEW BALANCE " + agent.myBalance);
                                     System.out.println("Curator I GOT " + artifact);
-                                } else {
+                                } else if (answer.getPerformative() == ACLMessage.REJECT_PROPOSAL) {
                                     // Handle rejected
                                     System.out.println("Curator I DIDN'T GET " + artifact);
-                                    step = 0;
+                                    step = 2;
                                 }
                             }
                             else {
@@ -192,8 +192,6 @@ public class CuratorAgent extends Agent{
                             }
                             break;
                     }
-
-
                 }
 
                 @Override
@@ -202,10 +200,6 @@ public class CuratorAgent extends Agent{
                 }
             });
         }
-
-
-
-
 
 
         public int onEnd() {

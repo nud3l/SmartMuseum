@@ -96,6 +96,7 @@ public class ArtistManagementAgent extends Agent {
             addSubBehaviour(new Behaviour() {
                 private AID winner = null;
                 private AID[] rejected = new AID[agent.curators.length - 1];
+                private int rejectCount = 0;
                 private int currentPrice;
                 private int step = 0;
                 private int auctionRound = 0;
@@ -159,10 +160,9 @@ public class ArtistManagementAgent extends Agent {
                                     if (proposal.getContent().equals("YES") && winner != null) {
                                         AID late = proposal.getSender();
                                         System.out.println("Artist Manager got LOSERS " + artifact.getArtworkName());
-                                        for (int i = 0; i < rejected.length; i++) {
-                                            if (late != rejected[i]) {
-                                                rejected[i] = late;
-                                            }
+                                        if (late != winner){
+                                            rejected[rejectCount] = late;
+                                            rejectCount += 1;
                                         }
                                     }
                                 }
@@ -184,20 +184,20 @@ public class ArtistManagementAgent extends Agent {
                             break;
                         case 2:
                             // System.out.println("Artist Manager CASE 2 " + artifact.getArtworkName());
+                            // Send accept
+                            ACLMessage acceptMsg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+                            acceptMsg.addReceiver(winner);
+                            System.out.println("Artist Manager ACCEPT_PROPOSAL " + artifact.getArtworkName());
+                            agent.send(acceptMsg);
                             // Send rejects
                             ACLMessage rejectMsg = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
                             for (int i = 0; i < rejected.length; i++) {
                                 if (rejected[i] != null) {
                                     rejectMsg.addReceiver(rejected[i]);
+                                    System.out.println("Artist Manager REJECT_PROPOSAL " + artifact.getArtworkName());
                                 }
                             }
-                            System.out.println("Artist Manager ACCEPT_PROPOSAL " + artifact.getArtworkName());
                             agent.send(rejectMsg);
-                            // Send accept
-                            ACLMessage acceptMsg = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-                            acceptMsg.addReceiver(winner);
-                            System.out.println("Artist Manager REJECT_PROPOSAL " + artifact.getArtworkName());
-                            agent.send(acceptMsg);
                             step = 3;
                             break;
                     }
