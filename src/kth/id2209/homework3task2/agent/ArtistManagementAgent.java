@@ -1,7 +1,6 @@
 package kth.id2209.homework3task2.agent;
 
 import jade.core.AID;
-import jade.core.Agent;
 import jade.core.behaviours.*;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -24,11 +23,9 @@ public class ArtistManagementAgent extends MobileAgent {
     private AID[] curators;
     private AID[] auctioneers;
     public String container;
-    private int item = 2;
+    private int itemId = 2;
+    private transient Auction item;
     private int finalPrice;
-
-
-    Hashtable<Integer, Auction> auctionsbyID;
 
     protected void deregisterDF() {
         try {
@@ -66,36 +63,18 @@ public class ArtistManagementAgent extends MobileAgent {
         System.out.println("Hello! Artist Manager " + getAID().getName() + " is ready.");
 
         // Load test auctions
-        auctionsbyID = new Hashtable<>();
-        auctionsbyID = testAuctions();
+        // Hashtable<Integer, Auction> auctionsbyID;
+        // auctionsbyID = testAuctions();
 
 
-        // find the other auctioneers
-        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
-
-        // Handle results from auction
-        if (auctioneers.length != 0) {
-            addBehaviour(new BestPrice(this));
-        }
-
-        finalPrice = auctionsbyID.get(item).getInitialPrice();
+        finalPrice = item.getInitialPrice();
     }
 
     @Override
     void init() {
         super.init();
 
-        // find the bidders
-        curators = Utilities.searchDF(this, "bidder" + container);
-
-        // If invalid arguments or agents, exit with error
-        //if (curators.length == 0)
-        //    System.exit(1);
-
-        // Handle auctions
-        if (curators.length != 0) {
-            addBehaviour(new ArtistManagerInteractionWake(this, TIMEOUT));
-        }
+        item = new Auction(500000, "Girl with a Pearl Earring", 100000, 50000);
 
         // find the other auctioneers
         auctioneers = Utilities.searchDF(this, "auctioneer" + container);
@@ -105,18 +84,26 @@ public class ArtistManagementAgent extends MobileAgent {
             addBehaviour(new BestPrice(this));
         }
 
+        // find the bidders
+        curators = Utilities.searchDF(this, "bidder" + container);
+
+        // Handle auctions
+        if (curators.length != 0) {
+            addBehaviour(new ArtistManagerInteractionWake(this, TIMEOUT));
+        }
+
     }
 
     @Override
     protected void beforeMove() {
-        deregisterDF();
+        // deregisterDF();
         super.beforeMove();
     }
 
     @Override
     protected void afterMove() {
         super.afterMove();
-        registerDF();
+        // registerDF();
         init();
         sendBestPrice();
     }
@@ -147,6 +134,12 @@ public class ArtistManagementAgent extends MobileAgent {
             ACLMessage priceInfo = agent.receive(InformTemplate);
             if (priceInfo != null) {
                 AID sender = priceInfo.getSender();
+                if (receivedPrice == null) {
+                    receivedPrice.add(sender);
+                    repliesCount++;
+                    int agentPrice = Integer.parseInt(priceInfo.getContent());
+                    agent.finalPrice = agentPrice;
+                }
                 if (!receivedPrice.contains(sender)) {
                     receivedPrice.add(sender);
                     repliesCount++;
@@ -157,7 +150,7 @@ public class ArtistManagementAgent extends MobileAgent {
                 }
 
                 if ((repliesCount >= 2) && (agent.finalPrice != 0)) {
-                    if (agent.finalPrice != agent.auctionsbyID.get(agent.item).getInitialPrice()) {
+                    if (agent.finalPrice != agent.item.getInitialPrice()) {
                         System.out.println("ARTIST MANAGER We sold the artifact for " + agent.finalPrice);
                     } else {
                         System.out.println("ARTIST MANAGER We didn't sell the artifact");
@@ -215,7 +208,7 @@ public class ArtistManagementAgent extends MobileAgent {
         DutchAuction(ArtistManagementAgent agent) {
             this.agent = agent;
 
-            Auction artifact = agent.auctionsbyID.get(agent.item);
+            Auction artifact = agent.item;
 
             // ACLMessage INFORM
             addSubBehaviour(new OneShotBehaviour() {
@@ -352,24 +345,10 @@ public class ArtistManagementAgent extends MobileAgent {
     }
 
 
-
     protected void takeDown() {
         try {
             DFService.deregister(this);
         } catch (Exception e) {
         }
-    }
-
-    // Load sample artifacts
-    public Hashtable<Integer, Auction> testAuctions() {
-        Hashtable<Integer, Auction> auctionsByName = new Hashtable<>();
-
-        auctionsByName.put(1, new Auction(5000000, "Mona Lisa", 2000000, 200000));
-        auctionsByName.put(2, new Auction(500000, "Girl with a Pearl Earring", 100000, 50000));
-        auctionsByName.put(3, new Auction(2000000, "The Starry Night", 800000, 200000));
-        auctionsByName.put(4, new Auction(1500000, "The Night Watch", 1200000, 100000));
-        auctionsByName.put(5, new Auction(600000, "Sunflowers", 200000, 80000));
-
-        return auctionsByName;
     }
 }

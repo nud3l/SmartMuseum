@@ -48,8 +48,6 @@ public class CuratorAgent extends MobileAgent {
     protected void setup() {
         super.setup();
 
-        registerDF();
-
         System.out.println("Hello! Curator " + getAID().getName() + " is ready.");
 
         interests = testInterests(2);
@@ -63,7 +61,7 @@ public class CuratorAgent extends MobileAgent {
 
     @Override
     protected void beforeMove() {
-        deregisterDF();
+        // deregisterDF();
         super.beforeMove();
     }
 
