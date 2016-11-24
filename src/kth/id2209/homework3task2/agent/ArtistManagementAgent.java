@@ -1,4 +1,4 @@
-package kth.id2209.homework2.agent;
+package kth.id2209.homework3task2.agent;
 
 import jade.core.AID;
 import jade.core.Agent;
@@ -7,12 +7,11 @@ import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import jade.lang.acl.UnreadableException;
 import kth.id2209.homework1.agent.Utilities;
 import kth.id2209.homework2.pojo.Auction;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -20,20 +19,49 @@ import java.util.concurrent.ThreadLocalRandom;
  * Created by nud3l on 11/21/16.
  * Auctioneer
  */
-public class ArtistManagementAgent extends Agent {
+public class ArtistManagementAgent extends MobileAgent {
     private static final int TIMEOUT = 5000;
     private AID[] curators;
+    private AID[] auctioneers;
+    public String container;
+    private int item = 2;
+    private int finalPrice;
+
 
     Hashtable<Integer, Auction> auctionsbyID;
 
-    protected void setup() {
+    protected void deregisterDF() {
+        try {
+            DFService.deregister(this);
+        } catch (Exception e) {
+        }
+    }
 
+    protected void registerDF() {
         // Register in Directory Facilitator
         try {
-            DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "auctioneer"));
+            container = super.getDestination().getName();
+            String serviceName = "auctioneer" + container;
+            DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), serviceName));
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
+    }
+
+    protected void sendBestPrice() {
+        // find the other auctioneers
+        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
+        // Send results from auction
+        if (auctioneers.length != 0) {
+            addBehaviour(new SendBestPrice(this));
+        }
+    }
+
+    @Override
+    protected void setup() {
+        super.setup();
+
+        registerDF();
 
         System.out.println("Hello! Artist Manager " + getAID().getName() + " is ready.");
 
@@ -41,16 +69,128 @@ public class ArtistManagementAgent extends Agent {
         auctionsbyID = new Hashtable<>();
         auctionsbyID = testAuctions();
 
+
+        // find the other auctioneers
+        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
+
+        // Handle results from auction
+        if (auctioneers.length != 0) {
+            addBehaviour(new BestPrice(this));
+        }
+
+        finalPrice = auctionsbyID.get(item).getInitialPrice();
+    }
+
+    @Override
+    void init() {
+        super.init();
+
         // find the bidders
-        curators = Utilities.searchDF(this, "bidder");
+        curators = Utilities.searchDF(this, "bidder" + container);
 
         // If invalid arguments or agents, exit with error
-        if (curators.length == 0)
-            System.exit(1);
+        //if (curators.length == 0)
+        //    System.exit(1);
 
         // Handle auctions
-        addBehaviour(new ArtistManagerInteractionWake(this, TIMEOUT));
+        if (curators.length != 0) {
+            addBehaviour(new ArtistManagerInteractionWake(this, TIMEOUT));
+        }
+
+        // find the other auctioneers
+        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
+
+        // Handle results from auction
+        if (auctioneers.length != 0) {
+            addBehaviour(new BestPrice(this));
+        }
+
     }
+
+    @Override
+    protected void beforeMove() {
+        deregisterDF();
+        super.beforeMove();
+    }
+
+    @Override
+    protected void afterMove() {
+        super.afterMove();
+        registerDF();
+        init();
+        sendBestPrice();
+    }
+
+    @Override
+    protected void beforeClone() {
+        super.beforeClone();
+    }
+
+    @Override
+    protected void afterClone() {
+        super.afterClone();
+    }
+
+    // Negotiate best price
+    private static class BestPrice extends CyclicBehaviour {
+        ArtistManagementAgent agent;
+        private ArrayList<AID> receivedPrice;
+        private int repliesCount = 0;
+
+        BestPrice(ArtistManagementAgent agent) {
+            this.agent = agent;
+        }
+
+        @Override
+        public void action() {
+            MessageTemplate InformTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM_IF);
+            ACLMessage priceInfo = agent.receive(InformTemplate);
+            if (priceInfo != null) {
+                AID sender = priceInfo.getSender();
+                if (!receivedPrice.contains(sender)) {
+                    receivedPrice.add(sender);
+                    repliesCount++;
+                    int agentPrice = Integer.parseInt(priceInfo.getContent());
+                    if ((agentPrice != 0) && (agentPrice < agent.finalPrice)) {
+                        agent.finalPrice = agentPrice;
+                    }
+                }
+
+                if ((repliesCount >= 2) && (agent.finalPrice != 0)) {
+                    if (agent.finalPrice != agent.auctionsbyID.get(agent.item).getInitialPrice()) {
+                        System.out.println("ARTIST MANAGER We sold the artifact for " + agent.finalPrice);
+                    } else {
+                        System.out.println("ARTIST MANAGER We didn't sell the artifact");
+                    }
+                }
+            } else {
+                // Update list of auctioneers
+                agent.auctioneers = Utilities.searchDF(agent, "auctioneer" + agent.container);
+                block();
+            }
+        }
+    }
+
+    // Send best price
+    private class SendBestPrice extends OneShotBehaviour {
+        ArtistManagementAgent agent;
+
+        SendBestPrice(ArtistManagementAgent agent) {
+            this.agent = agent;
+        }
+
+        @Override
+        public void action() {
+            System.out.println("Artist Manager send INFORM FINAL PRICE " + agent.finalPrice);
+            ACLMessage aclMessage = Utilities.createAclMessage(
+                    ACLMessage.INFORM_IF,
+                    agent.auctioneers,
+                    (Integer.toString(agent.finalPrice))
+            );
+            agent.send(aclMessage);
+        }
+    }
+
 
     // Wake after timeout
     private static class ArtistManagerInteractionWake extends WakerBehaviour {
@@ -74,9 +214,8 @@ public class ArtistManagementAgent extends Agent {
 
         DutchAuction(ArtistManagementAgent agent) {
             this.agent = agent;
-            // Get random item
-            int item = ThreadLocalRandom.current().nextInt(1, 5 + 1);
-            Auction artifact = agent.auctionsbyID.get(item);
+
+            Auction artifact = agent.auctionsbyID.get(agent.item);
 
             // ACLMessage INFORM
             addSubBehaviour(new OneShotBehaviour() {
@@ -152,12 +291,13 @@ public class ArtistManagementAgent extends Agent {
                                 }
                                 if (proposal.getPerformative() == ACLMessage.PROPOSE) {
                                     // First one to bid is the winner
-                                    if (proposal.getContent().equals("YES") && winner == null) {
+                                    if ((proposal.getContent().equals("YES")) && (winner == null)) {
                                         System.out.println("Artist Manager got a WINNER " + artifact.getArtworkName());
                                         winner = proposal.getSender();
+                                        agent.finalPrice = currentPrice;
                                     }
                                     // Late bidders will be rejected
-                                    if (proposal.getContent().equals("YES") && winner != null) {
+                                    if ((proposal.getContent().equals("YES")) && (winner != null)) {
                                         AID late = proposal.getSender();
                                         System.out.println("Artist Manager got LOSERS " + artifact.getArtworkName());
                                         if (late != winner){
@@ -168,9 +308,9 @@ public class ArtistManagementAgent extends Agent {
                                 }
                                 // System.out.println("Artist Manager REPLIES COUNT " + repliesCount);
                                 // System.out.println("Artist Manager CURATORS " + agent.curators.length);
-                                if (repliesCount >= agent.curators.length && winner != null) {
+                                if ((repliesCount >= agent.curators.length) && (winner != null)) {
                                     step = 2;
-                                } else if (repliesCount >= agent.curators.length && winner == null) {
+                                } else if ((repliesCount >= agent.curators.length) && (winner == null)) {
                                     // If we don't have a winner repeat
                                     System.out.println("Artist Manager NEXT ROUND " + auctionRound);
                                     step = 0;

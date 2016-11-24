@@ -1,38 +1,54 @@
-package kth.id2209.homework2.agent;
+package kth.id2209.homework3task2.agent;
 
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
-import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.SequentialBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
+import jade.gui.GuiEvent;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import kth.id2209.homework1.agent.Utilities;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Hashtable;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by nud3l on 11/21/16.
  * Bidder -> need to be multiple
  */
-public class CuratorAgent extends Agent{
+public class CuratorAgent extends MobileAgent {
     private int myBalance = ThreadLocalRandom.current().nextInt(1000000, 5000000 + 1);
     private ArrayList<String> interests;
     private ArrayList<String> artifacts = new ArrayList<>();
+    public String container;
 
-    protected void setup() {
+    protected void deregisterDF() {
+        try {
+            DFService.deregister(this);
+        } catch (Exception e) {
+        }
+    }
+
+    protected void registerDF() {
         // Register in Directory Facilitator
         try {
-            DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), "bidder"));
+            container = super.getDestination().getName();
+            String serviceName = "bidder" + container;
+            DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), serviceName));
         } catch (FIPAException fe) {
             fe.printStackTrace();
         }
+    }
+
+    @Override
+    protected void setup() {
+        super.setup();
+
+        registerDF();
 
         System.out.println("Hello! Curator " + getAID().getName() + " is ready.");
 
@@ -40,8 +56,32 @@ public class CuratorAgent extends Agent{
         System.out.println("Curator interests " + interests);
 
         addBehaviour(new DutchAuctionBidder(this));
-
     }
+
+    @Override
+    void init() { super.init(); }
+
+    @Override
+    protected void beforeMove() {
+        deregisterDF();
+        super.beforeMove();
+    }
+
+    @Override
+    protected void afterMove() {
+        super.afterMove();
+        registerDF();
+    }
+
+    @Override
+    protected void beforeClone() { super.beforeClone(); }
+
+    @Override
+    protected void afterClone() {
+        init();
+        registerDF();
+    }
+
     private static class DutchAuctionBidder extends SequentialBehaviour {
         CuratorAgent agent;
         String artifact;
@@ -92,7 +132,7 @@ public class CuratorAgent extends Agent{
                 private int startPrice = 0;
                 private int step = 0;
                 private int auctionRound = 0;
-                private AID[] curators = Utilities.searchDF(agent, "bidder");
+                private AID[] curators = Utilities.searchDF(agent, "bidder" + agent.container);
                 private ArrayList<Integer> curatorsValues = new ArrayList<>();
                 private int minCurators = 0;
                 @Override
@@ -173,14 +213,8 @@ public class CuratorAgent extends Agent{
                             if (answer != null) {
                                 if (answer.getPerformative() == ACLMessage.ACCEPT_PROPOSAL) {
                                     // Handle accepted proposal
-                                    // Update my balance
-                                    agent.myBalance -= currentPrice;
-                                    // Update my list of artifacts and interests
-                                    agent.interests.remove(artifact);
-                                    agent.artifacts.add(artifact);
+                                    System.out.println("Curator I MAY GOT " + artifact);
                                     step = 2;
-                                    System.out.println("Curator MY NEW BALANCE " + agent.myBalance);
-                                    System.out.println("Curator I GOT " + artifact);
                                 } else if (answer.getPerformative() == ACLMessage.REJECT_PROPOSAL) {
                                     // Handle rejected
                                     System.out.println("Curator I DIDN'T GET " + artifact);

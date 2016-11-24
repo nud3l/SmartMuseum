@@ -1,4 +1,4 @@
-package kth.id2209.homework2.pojo;
+package kth.id2209.homework3task2.pojo;
 
 /**
  * Created by nud3l on 11/21/16.
