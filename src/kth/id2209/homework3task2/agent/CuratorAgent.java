@@ -25,6 +25,11 @@ public class CuratorAgent extends MobileAgent {
     private ArrayList<String> interests;
     private ArrayList<String> artifacts = new ArrayList<>();
     public String container;
+    private AID[] curators;
+
+    protected void dutchAction() {
+        addBehaviour(new DutchAuctionBidder(this));
+    }
 
     protected void deregisterDF() {
         try {
@@ -47,17 +52,20 @@ public class CuratorAgent extends MobileAgent {
     @Override
     protected void setup() {
         super.setup();
+    }
 
+    @Override
+    void init() {
+        super.init();
         System.out.println("Hello! Curator " + getAID().getName() + " is ready.");
 
         interests = testInterests(2);
         System.out.println("Curator interests " + interests);
 
-        addBehaviour(new DutchAuctionBidder(this));
-    }
+        curators = Utilities.searchDF(this, "bidder" + container);
 
-    @Override
-    void init() { super.init(); }
+        dutchAction();
+    }
 
     @Override
     protected void beforeMove() {
@@ -76,6 +84,7 @@ public class CuratorAgent extends MobileAgent {
 
     @Override
     protected void afterClone() {
+        super.afterClone();
         init();
         registerDF();
     }
@@ -130,7 +139,7 @@ public class CuratorAgent extends MobileAgent {
                 private int startPrice = 0;
                 private int step = 0;
                 private int auctionRound = 0;
-                private AID[] curators = Utilities.searchDF(agent, "bidder" + agent.container);
+                private AID[] curators = agent.curators;
                 private ArrayList<Integer> curatorsValues = new ArrayList<>();
                 private int minCurators = 0;
                 @Override
@@ -153,10 +162,8 @@ public class CuratorAgent extends MobileAgent {
                                         currentPrice = Integer.parseInt(content);
                                     }
                                     // Assume values that other curators might have based on rounds
-                                    for (int i = 0; i < curators.length; i++) {
-                                        if (curators[i] != agent.getAID()) {
-                                            curatorsValues.add(ThreadLocalRandom.current().nextInt(100000, 500000 + 1));
-                                        }
+                                    for (int i = 0; i < 2; i++) {
+                                        curatorsValues.add(ThreadLocalRandom.current().nextInt(100000, 500000 + 1));
                                     }
                                     // Determine
                                     minCurators = curatorsValues.indexOf(Collections.min(curatorsValues));

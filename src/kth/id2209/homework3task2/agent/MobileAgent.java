@@ -90,7 +90,6 @@ public class MobileAgent extends GuiAgent {
             if (msg == null) { block(); return; }
 
             if (msg.getPerformative() == ACLMessage.REQUEST){
-                System.out.println("I received a request to MOVE");
 
                 try {
                     ContentElement content = getContentManager().extractContent(msg);

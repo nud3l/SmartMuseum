@@ -23,7 +23,6 @@ public class ArtistManagementAgent extends MobileAgent {
     private AID[] curators;
     private AID[] auctioneers;
     public String container;
-    private int itemId = 2;
     private transient Auction item;
     private int finalPrice;
 
@@ -37,8 +36,7 @@ public class ArtistManagementAgent extends MobileAgent {
     protected void registerDF() {
         // Register in Directory Facilitator
         try {
-            container = super.getDestination().getName();
-            String serviceName = "auctioneer" + container;
+            String serviceName = "auctioneer";
             DFService.register(this, Utilities.buildDFAgent(this.getAID(), getLocalName(), serviceName));
         } catch (FIPAException fe) {
             fe.printStackTrace();
@@ -47,7 +45,8 @@ public class ArtistManagementAgent extends MobileAgent {
 
     protected void sendBestPrice() {
         // find the other auctioneers
-        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
+        container = super.getDestination().getName();
+        auctioneers = Utilities.searchDF(this, "auctioneer");
         // Send results from auction
         if (auctioneers.length != 0) {
             addBehaviour(new SendBestPrice(this));
@@ -74,10 +73,11 @@ public class ArtistManagementAgent extends MobileAgent {
     void init() {
         super.init();
 
-        item = new Auction(500000, "Girl with a Pearl Earring", 100000, 50000);
+        item = new Auction(600000, "Sunflowers", 200000, 80000);
 
+        container = super.getDestination().getName();
         // find the other auctioneers
-        auctioneers = Utilities.searchDF(this, "auctioneer" + container);
+        auctioneers = Utilities.searchDF(this, "auctioneer");
 
         // Handle results from auction
         if (auctioneers.length != 0) {
@@ -133,17 +133,16 @@ public class ArtistManagementAgent extends MobileAgent {
             MessageTemplate InformTemplate = MessageTemplate.MatchPerformative(ACLMessage.INFORM_IF);
             ACLMessage priceInfo = agent.receive(InformTemplate);
             if (priceInfo != null) {
+                int agentPrice = Integer.parseInt(priceInfo.getContent());
+                repliesCount++;
+                System.out.println("ARTIST MANAGER Reply count" + repliesCount);
                 AID sender = priceInfo.getSender();
                 if (receivedPrice == null) {
                     receivedPrice.add(sender);
-                    repliesCount++;
-                    int agentPrice = Integer.parseInt(priceInfo.getContent());
                     agent.finalPrice = agentPrice;
                 }
                 if (!receivedPrice.contains(sender)) {
                     receivedPrice.add(sender);
-                    repliesCount++;
-                    int agentPrice = Integer.parseInt(priceInfo.getContent());
                     if ((agentPrice != 0) && (agentPrice < agent.finalPrice)) {
                         agent.finalPrice = agentPrice;
                     }
