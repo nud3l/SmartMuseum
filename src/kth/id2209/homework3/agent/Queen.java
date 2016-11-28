@@ -2,9 +2,9 @@ package kth.id2209.homework3.agent;
 
 import jade.core.AID;
 import jade.core.Agent;
-import jade.core.behaviours.*;
-import jade.domain.DFService;
-import jade.domain.FIPAException;
+import jade.core.behaviours.FSMBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.SimpleBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
@@ -44,22 +44,23 @@ public class Queen extends Agent {
             findAll = (boolean) getArguments()[4];
         } else {
             int prevQ = column - 1;
-            previousQueen = new AID("queen" + prevQ, AID.ISLOCALNAME);
+            previousQueen = new AID("queen" + prevQ, AID.ISLOCALNAME);  // Previous queen
         }
 
         if (column != boardSize - 1) {
             int nextQ = column + 1;
-            nextQueen = new AID("queen" + nextQ, AID.ISLOCALNAME);
+            nextQueen = new AID("queen" + nextQ, AID.ISLOCALNAME);  // Next queen
         }
 
         System.out.println("Hello! " + getAID().getName() + " is ready. Previous queen is " + (previousQueen == null ?
-                "" : previousQueen.getLocalName()) + " next queen is " + (nextQueen == null ? "" : nextQueen.getLocalName()));
+                "-" : previousQueen.getLocalName()) + " next queen is " + (nextQueen == null ? "-" : nextQueen.getLocalName()));
+        System.out.println();
 
         if (firstQueen) {
             FSMBehaviour firstQueenFSM = new FSMBehaviour();
 
             firstQueenFSM.registerFirstState(new OneShotBehaviour() {
-                int availablePositions = 1;
+                int availablePositions;
 
                 @Override
                 public void action() {
@@ -122,15 +123,16 @@ public class Queen extends Agent {
             firstQueenFSM.registerLastState(new OneShotBehaviour() {
                 @Override
                 public void action() {
-                    System.out.println("Queen" + column + " is quitting");
+                    System.out.println("Queen" + column + " is quitting - all positions explored");
                 }
             }, STATE_C);
 
-            firstQueenFSM.registerTransition(STATE_A, STATE_B, 1);
+            firstQueenFSM.registerTransition(STATE_A, STATE_B, 1); // Wait for approval or reject
             firstQueenFSM.registerTransition(STATE_A, STATE_C, 0); // No available positions to try
 
-            firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.REJECT_PROPOSAL, new String[]{STATE_A, STATE_B});
+            firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.REJECT_PROPOSAL, new String[]{STATE_A, STATE_B}); // If reject try next position
 
+            // If findAll is true all solutions to N will be calculated, otherwise only first solution is calculated
             if (findAll) {
                 firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.ACCEPT_PROPOSAL, new String[]{STATE_A, STATE_B});
             } else {
@@ -139,10 +141,12 @@ public class Queen extends Agent {
 
             addBehaviour(firstQueenFSM);
         } else {
+
+            // Rest of queens
             FSMBehaviour fsm = new FSMBehaviour();
 
             fsm.registerFirstState(new SimpleBehaviour() {
-                boolean msgReceived = false;
+                boolean msgReceived;
 
                 @Override
                 public void action() {
@@ -168,7 +172,7 @@ public class Queen extends Agent {
             }, STATE_A);
 
             fsm.registerState(new OneShotBehaviour() {
-                int availablePositions = 1;
+                int availablePositions;
 
                 @Override
                 public void action() {
@@ -308,5 +312,6 @@ public class Queen extends Agent {
             }
             System.out.println();
         }
+        System.out.print("\n\n");
     }
 }
