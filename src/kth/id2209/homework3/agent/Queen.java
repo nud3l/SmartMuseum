@@ -36,12 +36,12 @@ public class Queen extends Agent {
     protected void setup() {
         boardSize = (int) getArguments()[0];
         column = (int) getArguments()[1];
+        findAll = (boolean) getArguments()[2];
 
         // First queen ?
         if (getArguments().length == 5) {
-            board = (int[]) getArguments()[2];
-            firstQueen = (boolean) getArguments()[3];
-            findAll = (boolean) getArguments()[4];
+            board = (int[]) getArguments()[3];
+            firstQueen = (boolean) getArguments()[4];
         } else {
             int prevQ = column - 1;
             previousQueen = new AID("queen" + prevQ, AID.ISLOCALNAME);  // Previous queen
@@ -87,23 +87,14 @@ public class Queen extends Agent {
             firstQueenFSM.registerState(new SimpleBehaviour() {
                 boolean replyReceived;
                 int performativeReceived;
+                int solutionCount;
 
                 @Override
                 public void action() {
                     replyReceived = false;
-                    ACLMessage aclMessage = myAgent.receive(MessageTemplate.or(MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MatchPerformative(ACLMessage.REJECT_PROPOSAL)));
+                    ACLMessage aclMessage = myAgent.receive(MessageTemplate.MatchPerformative(ACLMessage.CONFIRM));
                     if (aclMessage != null) {
                         performativeReceived = aclMessage.getPerformative();
-                        if (aclMessage.getPerformative() == ACLMessage.ACCEPT_PROPOSAL) {
-                            try {
-                                int[] recvBoard = (int[]) aclMessage.getContentObject();
-                                System.out.println(Arrays.toString(recvBoard));
-                                PrintBoard(recvBoard);
-                            } catch (UnreadableException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
                         replyReceived = true;
                     } else {
                         block();
@@ -129,15 +120,7 @@ public class Queen extends Agent {
 
             firstQueenFSM.registerTransition(STATE_A, STATE_B, 1); // Wait for approval or reject
             firstQueenFSM.registerTransition(STATE_A, STATE_C, 0); // No available positions to try
-
-            firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.REJECT_PROPOSAL, new String[]{STATE_A, STATE_B}); // If reject try next position
-
-            // If findAll is true all solutions to N will be calculated, otherwise only first solution is calculated
-            if (findAll) {
-                firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.ACCEPT_PROPOSAL, new String[]{STATE_A, STATE_B});
-            } else {
-                firstQueenFSM.registerTransition(STATE_B, STATE_C, ACLMessage.ACCEPT_PROPOSAL);
-            }
+            firstQueenFSM.registerTransition(STATE_B, STATE_A, ACLMessage.CONFIRM, new String[]{STATE_A, STATE_B});
 
             addBehaviour(firstQueenFSM);
         } else {
@@ -173,6 +156,7 @@ public class Queen extends Agent {
 
             fsm.registerState(new OneShotBehaviour() {
                 int availablePositions;
+                int solutionCount = 0;
 
                 @Override
                 public void action() {
@@ -194,7 +178,7 @@ public class Queen extends Agent {
                             availablePositions = 0;
                             lastProposed = -1;
 
-                            ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.REJECT_PROPOSAL, new AID[]{previousQueen}, board);
+                            ACLMessage aclMessage = Utilities.createAclMessage(ACLMessage.CONFIRM, new AID[]{previousQueen}, board);
                             myAgent.send(aclMessage);
                         } else {
                             board[column] = lastProposed;
@@ -202,15 +186,32 @@ public class Queen extends Agent {
                             ACLMessage aclMessage;
                             if (nextQueen == null) {
                                 // Last queen - found solution
-                                aclMessage = Utilities.createAclMessage(ACLMessage.ACCEPT_PROPOSAL, new AID[]{previousQueen}, board);
+                                solutionCount++;
                                 availablePositions = -1;
+                                System.out.println(Arrays.toString(board));
+                                System.out.println(solutionCount);
+                                PrintBoard(board);
+
+                                // Only one solution is needed
+                                if (!findAll) {
+                                    // end
+                                    lastProposed = -1;
+                                    aclMessage = Utilities.createAclMessage(ACLMessage.CANCEL, new AID[]{previousQueen}, board);
+                                    myAgent.send(aclMessage);
+                                } else if (lastProposed == boardSize - 1) {
+                                    // end
+                                    lastProposed = -1;
+                                    aclMessage = Utilities.createAclMessage(ACLMessage.CONFIRM, new AID[]{previousQueen}, board);
+                                    myAgent.send(aclMessage);
+                                } else {
+                                    availablePositions = 3;
+                                }
                             } else {
                                 aclMessage = Utilities.createAclMessage(ACLMessage.PROPOSE, new AID[]{nextQueen}, board);
+                                myAgent.send(aclMessage);
+
                             }
-
-                            myAgent.send(aclMessage);
                         }
-
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -228,20 +229,9 @@ public class Queen extends Agent {
                 @Override
                 public void action() {
                     replyReceived = false;
-                    ACLMessage aclMessage = myAgent.receive(MessageTemplate.or(MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MatchPerformative(ACLMessage.REJECT_PROPOSAL)));
+                    ACLMessage aclMessage = myAgent.receive(MessageTemplate.or(MatchPerformative(ACLMessage.CONFIRM), MatchPerformative(ACLMessage.CANCEL)));
                     if (aclMessage != null) {
                         performativeReceived = aclMessage.getPerformative();
-                        if (aclMessage.getPerformative() == ACLMessage.ACCEPT_PROPOSAL) {
-                            try {
-                                ACLMessage replyMessage = Utilities.createAclMessage(ACLMessage.ACCEPT_PROPOSAL, new AID[]{previousQueen}, aclMessage.getContentObject());
-                                myAgent.send(replyMessage);
-                            } catch (UnreadableException e) {
-                                e.printStackTrace();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
                         replyReceived = true;
                     } else {
                         block();
@@ -260,7 +250,7 @@ public class Queen extends Agent {
             fsm.registerLastState(new OneShotBehaviour() {
                 @Override
                 public void action() {
-                    System.out.println("No more solutions");
+//                    System.out.println("No more solutions");
                 }
             }, STATE_D);
 
@@ -268,8 +258,9 @@ public class Queen extends Agent {
             fsm.registerTransition(STATE_B, STATE_C, 1); // Send PROPOSE
             fsm.registerTransition(STATE_B, STATE_A, -1, new String[]{STATE_A, STATE_B, STATE_C}); // Last queen - found solution
             fsm.registerTransition(STATE_B, STATE_A, 0, new String[]{STATE_A, STATE_B}); // No positions - send REJECT_PROPOSAL
-            fsm.registerTransition(STATE_C, STATE_A, ACLMessage.ACCEPT_PROPOSAL, new String[]{STATE_A, STATE_B, STATE_C}); // Send ACCEPT_PROPOSAL to previous queen
-            fsm.registerTransition(STATE_C, STATE_B, ACLMessage.REJECT_PROPOSAL, new String[]{STATE_A, STATE_B, STATE_C}); // Got REJECT_PROPOSAL - goto STATE B
+            fsm.registerTransition(STATE_B, STATE_B, 3, new String[]{STATE_A, STATE_B}); // Last queen - all solutions
+            fsm.registerTransition(STATE_C, STATE_B, ACLMessage.CONFIRM, new String[]{STATE_A, STATE_B, STATE_C}); // Got CONFIRM - check other positions
+            fsm.registerTransition(STATE_C, STATE_D, ACLMessage.CANCEL); // Got Cancel - Do not check other positions
 
             addBehaviour(fsm);
         }

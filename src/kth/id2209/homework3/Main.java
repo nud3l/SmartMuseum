@@ -16,7 +16,8 @@ import java.util.Arrays;
 public class Main {
     private static final String PKG = "kth.id2209.homework3.agent";
     public static final int PORT = 60000;
-    public static final int N = 10;
+    public static final int N = 5;
+    public static final boolean FINDALL = true;
 
     public static int[] board;
 
@@ -31,6 +32,10 @@ public class Main {
         Profile aProfile = new ProfileImpl(ipAddress, PORT, null);
         AgentContainer agentContainer = runtime.createAgentContainer(aProfile);
 
+        if (N < 4) {
+            System.exit(0);
+        }
+
         // Create N * N chess board using one-dimensional array
         // To save space row index is the column, value is the row
         board = new int[N];
@@ -38,11 +43,11 @@ public class Main {
         // Initialize the board with -1
 
         // First queen
-        agentContainer.createNewAgent("queen0", PKG + ".Queen", new Object[]{N, 0, board, true, true}).start();
+        agentContainer.createNewAgent("queen0", PKG + ".Queen", new Object[]{N, 0, FINDALL, board, true}).start();
 
         // Create N-1 queens
         for (int i = 1; i < N; i++) {
-            agentContainer.createNewAgent("queen" + i, PKG + ".Queen", new Object[]{N, i}).start();
+            agentContainer.createNewAgent("queen" + i, PKG + ".Queen", new Object[]{N, i, FINDALL}).start();
         }
     }
 }
