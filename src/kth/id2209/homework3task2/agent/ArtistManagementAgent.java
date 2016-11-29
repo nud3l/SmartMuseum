@@ -45,7 +45,7 @@ public class ArtistManagementAgent extends MobileAgent {
         container = super.getDestination().getName();
         auctioneers = Utilities.searchDF(this, "auctioneer");
         // Send results from auction after coming back to container-1
-        if ((auctioneers.length != 0) && (container.equals("Container-1"))){
+        if ((auctioneers.length != 0) && (container.equals("Artist"))){
             addBehaviour(new SendBestPrice(this));
         }
     }

@@ -1,16 +1,14 @@
 package kth.id2209.homework3task2.agent;
 
 import java.util.*;
-import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
 import jade.lang.acl.*;
 import jade.content.*;
 import jade.content.onto.basic.*;
-import jade.content.lang.*;
 import jade.content.lang.sl.*;
 import jade.core.*;
-import jade.core.behaviours.*;
-import jade.domain.*;
 import jade.domain.mobility.*;
 import jade.domain.JADEAgentManagement.*;
 import jade.gui.*;
@@ -22,10 +20,11 @@ import jade.gui.*;
 
 
 public class ControllerAgent extends GuiAgent {
-    private jade.wrapper.AgentContainer home;
+    private jade.wrapper.AgentContainer artist_home;
     private jade.wrapper.AgentContainer[] container = null;
     private Map locations = new HashMap();
     private Vector agents = new Vector();
+    private String[] nameContainers = new String[]{"Artist","HM","G"};
     private int agentCnt = 0;
     private int command;
     transient protected ControllerAgentGui myGui;
@@ -47,10 +46,11 @@ public class ControllerAgent extends GuiAgent {
 
         try {
             // Create the container objects
-            home = runtime.createAgentContainer(new ProfileImpl());
             container = new jade.wrapper.AgentContainer[3];
-            for (int i = 0; i < 2; i++){
-                container[0] = runtime.createAgentContainer(new ProfileImpl());
+            for (int i = 0; i < 3; i++){
+                Profile profile = new ProfileImpl();
+                profile.setParameter(Profile.CONTAINER_NAME, nameContainers[i]);
+                container[i] = runtime.createAgentContainer(profile);
             }
             doWait(2000);
 
@@ -84,7 +84,6 @@ public class ControllerAgent extends GuiAgent {
 
         if (command == QUIT) {
             try {
-                home.kill();
                 for (int i = 0; i < container.length; i++) container[i].kill();
             }
             catch (Exception e) { e.printStackTrace(); }
@@ -99,8 +98,8 @@ public class ControllerAgent extends GuiAgent {
             try {
                 Object[] args = new Object[2];
                 args[0] = getAID();
-                String name = "Artist Manager"+agentCnt++;
-                a = home.createNewAgent(name, ArtistManagementAgent.class.getName(), args);
+                String name = "Artist Manager";
+                a = container[0].createNewAgent(name, ArtistManagementAgent.class.getName(), args);
                 a.start();
                 agents.add(name);
                 myGui.updateList(agents);
@@ -114,13 +113,15 @@ public class ControllerAgent extends GuiAgent {
 
             jade.wrapper.AgentController a = null;
             try {
-                Object[] args = new Object[2];
-                args[0] = getAID();
-                String name = "Curator"+agentCnt++;
-                a = home.createNewAgent(name, CuratorAgent.class.getName(), args);
-                a.start();
-                agents.add(name);
-                myGui.updateList(agents);
+                for (int i=1; i<3; i++) {
+                    Object[] args = new Object[2];
+                    args[0] = getAID();
+                    String name = "Curator"+agentCnt++;
+                    a = container[i].createNewAgent(name, CuratorAgent.class.getName(), args);
+                    a.start();
+                    agents.add(name);
+                    myGui.updateList(agents);
+                }
             }
             catch (Exception ex) {
                 System.out.println("Problem creating new agent");
