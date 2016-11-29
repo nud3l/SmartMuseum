@@ -10,9 +10,6 @@ import kth.id2209.homework1.agent.Utilities;
 import kth.id2209.homework2.pojo.Auction;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by nud3l on 11/21/16.
@@ -47,8 +44,8 @@ public class ArtistManagementAgent extends MobileAgent {
         // find the other auctioneers
         container = super.getDestination().getName();
         auctioneers = Utilities.searchDF(this, "auctioneer");
-        // Send results from auction
-        if (auctioneers.length != 0) {
+        // Send results from auction after coming back to container-1
+        if ((auctioneers.length != 0) && (container.equals("Container-1"))){
             addBehaviour(new SendBestPrice(this));
         }
     }
@@ -65,6 +62,12 @@ public class ArtistManagementAgent extends MobileAgent {
         // Hashtable<Integer, Auction> auctionsbyID;
         // auctionsbyID = testAuctions();
 
+        // find the other auctioneers
+
+        if (auctioneers.length == 0 ){
+            System.out.println("ARTIST MANAGER Waiting for prices");
+            addBehaviour(new BestPrice(this));
+        }
 
         finalPrice = item.getInitialPrice();
     }
@@ -76,18 +79,13 @@ public class ArtistManagementAgent extends MobileAgent {
         item = new Auction(600000, "Sunflowers", 200000, 80000);
 
         container = super.getDestination().getName();
-        // find the other auctioneers
-        auctioneers = Utilities.searchDF(this, "auctioneer");
 
-        // Handle results from auction
-        if (auctioneers.length != 0) {
-            addBehaviour(new BestPrice(this));
-        }
+        auctioneers = Utilities.searchDF(this, "auctioneer");
 
         // find the bidders
         curators = Utilities.searchDF(this, "bidder" + container);
 
-        // Handle auctions
+        // Handle auctions or handle results from auction
         if (curators.length != 0) {
             addBehaviour(new ArtistManagerInteractionWake(this, TIMEOUT));
         }
@@ -121,7 +119,7 @@ public class ArtistManagementAgent extends MobileAgent {
     // Negotiate best price
     private static class BestPrice extends CyclicBehaviour {
         ArtistManagementAgent agent;
-        private ArrayList<AID> receivedPrice;
+        private ArrayList<AID> receivedPrice = new ArrayList<>();
         private int repliesCount = 0;
 
         BestPrice(ArtistManagementAgent agent) {
@@ -135,7 +133,7 @@ public class ArtistManagementAgent extends MobileAgent {
             if (priceInfo != null) {
                 int agentPrice = Integer.parseInt(priceInfo.getContent());
                 repliesCount++;
-                System.out.println("ARTIST MANAGER Reply count" + repliesCount);
+                System.out.println("ARTIST MANAGER Reply count " + repliesCount);
                 AID sender = priceInfo.getSender();
                 if (receivedPrice == null) {
                     receivedPrice.add(sender);
@@ -156,8 +154,6 @@ public class ArtistManagementAgent extends MobileAgent {
                     }
                 }
             } else {
-                // Update list of auctioneers
-                agent.auctioneers = Utilities.searchDF(agent, "auctioneer" + agent.container);
                 block();
             }
         }
